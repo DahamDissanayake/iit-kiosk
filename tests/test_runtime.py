@@ -134,3 +134,22 @@ def test_runtime_loads_menu_from_source_on_start():
         await rt.stop()
 
     asyncio.run(go())
+
+
+def test_runtime_forwards_mute_and_voice_events():
+    async def go():
+        rt, sent = make()
+        muted = []
+        rt.mic_listeners.append(muted.append)
+        rt.start()
+        await rt.on_ui({"type": "dev", "action": "approach"})
+        assert muted[-1] is True
+        await rt.on_ui({"type": "speech.ended", "id": rt.c.pending[-1]})
+        assert muted[-1] is False
+        await rt.partial("what cour")
+        assert {"type": "stt", "text": "what cour", "final": False} in sent.msgs
+        await rt.final("What courses?")
+        assert rt.c.state in ("thinking", "speaking")
+        await rt.stop()
+
+    asyncio.run(go())
