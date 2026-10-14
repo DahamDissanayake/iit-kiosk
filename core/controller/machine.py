@@ -19,11 +19,13 @@ from core.controller.types import (
     Command,
     Event,
     MicMute,
+    MicStatus,
     Presence,
     Record,
     Speak,
     SpeechEnded,
     SpeechFinal,
+    SpeechStarted,
     StopSpeech,
     Tick,
     Touch,
@@ -73,6 +75,7 @@ class Controller:
         self.menu: tuple[MenuItem, ...] = phrases.menu
         self.state = "idle"
         self.camera_ok = True
+        self.mic_ok = True
         self.count = 0
         self.approaching = False
         self.empty_since: float | None = 0.0
@@ -124,6 +127,13 @@ class Controller:
             case CameraStatus(ok=ok):
                 self.camera_ok = ok
                 out.append(UiSend({"type": "camera", "ok": ok}))
+            case SpeechStarted():
+                if self.state == "listening" and not self.pending:
+                    self.listen_since = None
+            case MicStatus(ok=ok):
+                self.mic_ok = ok
+                if not ok and self.state == "listening":
+                    out.append(self._menu_msg())
             case Tick():
                 pass
         self._on_timers(now, out)
@@ -143,7 +153,10 @@ class Controller:
 
     def _on_speech_final(self, text: str, now: float, out: list[Command]) -> None:
         text = text.strip()
-        if self.state != "listening" or self.pending or not text:
+        if self.state != "listening" or self.pending:
+            return
+        if not text:
+            self.listen_since = now
             return
         if is_decline(text):
             out.append(Record("decline"))
@@ -299,6 +312,8 @@ class Controller:
         if state == "listening":
             out.append(MicMute(False))
             self.listen_since = now
+            if not self.mic_ok:
+                out.append(self._menu_msg())
 
     def _speak(self, text: str, out: list[Command], display: str | None = None) -> None:
         sid = f"s{next(self._ids)}"
@@ -331,8 +346,11 @@ class Controller:
     def _fail(self, kind: str, now: float, out: list[Command]) -> None:
         out.append(Record("unmatched" if kind == "unmatched" else "fallback"))
         self._answer_fixed(self.p.unmatched if kind == "unmatched" else self.p.offline, now, out)
+        out.append(self._menu_msg())
+
+    def _menu_msg(self) -> UiSend:
         items = [{"id": m.id, "label": m.label} for m in self.menu]
-        out.append(UiSend({"type": "menu", "show": True, "items": items}))
+        return UiSend({"type": "menu", "show": True, "items": items})
 
     def _end_turn(self, now: float, out: list[Command]) -> None:
         if self.question is not None and self.reply:
