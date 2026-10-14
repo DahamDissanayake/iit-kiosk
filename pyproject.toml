@@ -6,9 +6,13 @@ dependencies = [
     "fastapi>=0.115",
     "markdown-it-py>=3.0",
     "ncnn>=1.0.20240410",
+    "numpy>=1.26",
+    "onnxruntime>=1.18",
     "openvino>=2024.4",
     "pypdf>=5.0",
     "python-docx>=1.1",
+    "pyzmq>=26",
+    "sounddevice>=0.4.7",
     "uvicorn[standard]>=0.30",
 ]
 
