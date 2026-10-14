@@ -15,7 +15,7 @@
 - Work on a branch off `dev` named `task/<KEY>-<short-slug>`; commit messages are `<KEY>: short imperative summary`.
 - Never add a `Co-Authored-By` trailer, a "Generated with" line, or any AI or agent attribution anywhere.
 - Never commit secrets: `SESSION_SECRET` lives in `<data_dir>/.env`.
-- Python dependencies added in M5: `argon2-cffi` (baseline 6). `itsdangerous` (signs the session cookie; baseline 6 asks for a "signed HTTP-only cookie") and `python-multipart` (FastAPI needs it for file uploads) are small and implied by the spec. **Confirm both with Daham before adding.**
+- Python dependencies added in M5: `argon2-cffi` (baseline 6). `itsdangerous` (signs the session cookie; baseline 6 asks for a "signed HTTP-only cookie") and `python-multipart` (FastAPI needs it for file uploads) are small and implied by the spec; both approved by Daham on 14 Oct.
 - Dashboard dependencies are exactly those in Task 5's `package.json`, all named in baseline 6 plus their build tooling.
 - The PIN is 6 digits, stored only as an argon2 hash. Five wrong tries lock for `admin.lockout_s`.
 - Every `/api/*` route except `POST /api/auth/login` and `GET /api/auth/me` requires a session. `/health` and `/version` are public.
@@ -857,7 +857,7 @@ git commit -m "<KEY>: compute dashboard stats and health readings"
 
 - [ ] **Step 1: Add dependencies and config**
 
-After Daham confirms: `uv add itsdangerous python-multipart`
+Run: `uv add itsdangerous python-multipart` (approved)
 
 Append to `[admin]` in `config.toml`:
 ```toml
