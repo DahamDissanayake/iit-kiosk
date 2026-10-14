@@ -25,7 +25,7 @@ farewell_silent_s = 2       # how long the silent wave lasts when a visitor walk
 kids_default = false
 
 [voice]
-stt_model = "moonshine-small-streaming-en"
+stt_model = "moonshine/base"       # baseline target is Moonshine Voice Small Streaming; see docs/benchmarks.md
 vad_threshold = 0.5
 tts_voice = "en_US-lessac-medium"
 mic_device = "PowerConf"     # match by name

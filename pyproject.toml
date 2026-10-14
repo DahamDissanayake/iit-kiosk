@@ -13,6 +13,7 @@ dependencies = [
     "python-docx>=1.1",
     "pyzmq>=26",
     "sounddevice>=0.4.7",
+    "useful-moonshine-onnx>=20251121",
     "uvicorn[standard]>=0.30",
 ]
 
@@ -33,6 +34,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["slow: needs downloaded models; run with RUN_SLOW=1"]
 
 [tool.ruff]
 line-length = 100
