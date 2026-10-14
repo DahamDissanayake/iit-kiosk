@@ -1,7 +1,7 @@
 import pytest
 
 from core.controller.machine import Controller, ControllerConfig
-from core.controller.phrases import PHRASES, is_decline
+from core.controller.phrases import PHRASES, MenuItem, is_decline
 from core.controller.types import (
     AnswerDone,
     AnswerFailed,
@@ -414,3 +414,15 @@ def test_repo_config_toml_builds_a_controller_config():
 
     cfg = ControllerConfig.from_config(load_config("config.toml"))
     assert cfg == ControllerConfig()  # config.toml defaults match the baseline section 9 values
+
+
+def test_menu_comes_from_set_menu():
+    s = Sim()
+    s.c.set_menu([MenuItem("7", "Where is IIT?", "In Colombo.")])
+    s.to_listening()
+    s.ask(5.0, "q")
+    s.at(6.0, AnswerFailed("unmatched"))
+    assert s.ui("menu", s.out)[0]["items"] == [{"id": "7", "label": "Where is IIT?"}]
+    s.end_speech(8.0)
+    s.at(9.0, Touch("menu_item", "7"))
+    assert s.spoken()[-1] == "In Colombo."
