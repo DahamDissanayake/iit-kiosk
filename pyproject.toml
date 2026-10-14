@@ -18,6 +18,7 @@ dependencies = [
     "pyzmq>=26",
     "sounddevice>=0.4.7",
     "sqlite-vec>=0.1.6",
+    "useful-moonshine-onnx>=20251121",
     "uvicorn[standard]>=0.30",
 ]
 
