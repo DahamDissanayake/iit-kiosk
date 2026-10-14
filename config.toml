@@ -59,3 +59,8 @@ unmatched_retention_days = 30
 [ui]
 port = 8765
 music_url = ""               # set when IIT supplies the music file
+
+[bus]
+core_pub = "tcp://127.0.0.1:5550"    # core -> vision, voice
+vision_pub = "tcp://127.0.0.1:5551"  # vision -> core
+voice_pub = "tcp://127.0.0.1:5552"   # voice -> core (service mode only)

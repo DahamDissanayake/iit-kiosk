@@ -4,6 +4,10 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
+    "numpy>=1.26",
+    "onnxruntime>=1.18",
+    "pyzmq>=26",
+    "sounddevice>=0.4.7",
     "uvicorn[standard]>=0.30",
 ]
 
