@@ -36,6 +36,7 @@ provider = "gemini"          # "gemini", "anthropic" or "openai"
 model = ""                   # set once IIT picks the provider
 timeout_s = 6
 max_sentences = 3
+max_output_tokens = 200
 
 [rag]
 embed_model = "BAAI/bge-small-en-v1.5"
@@ -68,3 +69,7 @@ music_url = ""               # set when IIT supplies the music file
 core_pub = "tcp://127.0.0.1:5550"    # core -> vision, voice
 vision_pub = "tcp://127.0.0.1:5551"  # vision -> core
 voice_pub = "tcp://127.0.0.1:5552"   # voice -> core (service mode only)
+
+[paths]
+data_dir = "./.data"         # /var/lib/kiosk on the Pi (KIOSK_DATA_DIR)
+models_dir = "./models"      # /opt/kiosk/models on the Pi (KIOSK_MODELS_DIR)
