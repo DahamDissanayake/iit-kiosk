@@ -25,7 +25,12 @@ Constraints carried from the baseline: Raspberry Pi 5 8 GB, no PyTorch on the Pi
 | 12. Git flow | `task/<KEY>-<slug>` or `issue/<KEY>-<slug>` branches off `dev`, merged to `dev` by pull request; `dev` merged to `main` at release points (see `CLAUDE.md`). Release tags are cut from `main`. |
 | 8. Data model | `sources.kind` gains `menu`: the pre-written touch-menu answers, editable in the dashboard. |
 | 4.3 Voice | Conversation memory: last 3 Q&A pairs of the current session go to the LLM (section 5). |
-| 7.1 WebSocket | Adds `stt` (Core → UI, `{text, final}`) for live transcript in the bubble, `menu` (Core → UI, `{show, items:[{id,label}]}`) for the touch menu, and `dev` (Core → UI) to enable the dev panel. |
+| 7.1 WebSocket | Adds `stt` (Core → UI, `{text, final}`) for live transcript in the bubble, `menu` (Core → UI, `{show, items:[{id,label}]}`) for the touch menu, `dev` (Core → UI) to enable the dev panel, `kids` (Core → UI) to reset the toggle per session, and `privacy` (Core → UI) to change the notice when unmatched-question logging is on. The UI is served by kiosk-core and connects to `/ws` on the same host. |
+| 8. Data model | `sources` gains `body`: the extracted text (JSON for Q&A and file sections), so edits and re-indexing never need the original file. |
+| 6. Stack: person detection | The Ultralytics package needs PyTorch, which conflicts with "No PyTorch on the Pi". The exported YOLO11n runs directly in the `ncnn` and `openvino` runtimes, a small IoU tracker replaces ByteTrack, and Ultralytics is used only for the one-off export. NCNN runs FP32/FP16 (Ultralytics has no NCNN INT8 export); OpenVINO runs INT8. |
+| 6. Stack: speech to text | Starts on Moonshine ONNX `base`, which has a stable API. Moonshine Voice Small Streaming is evaluated in M3 and adopted if it is faster on the Pi. |
+| 6.1 Services | Piper TTS stays in kiosk-core; kiosk-voice (if used) does only capture, VAD and STT. Services run as systemd **user** services of `kiosk` (lingering on) so they reach the desktop's PipeWire audio. kiosk-ui is Chromium started by labwc autostart in a restart loop. |
+| 12. Deploy | `ssh kiosk@kiosk /opt/kiosk/deploy.sh vX.Y.Z` (no sudo). YOLO model files come from a fixed `models-v1` release so their checksum is stable. |
 
 ---
 
