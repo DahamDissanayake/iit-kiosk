@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+*.env
+models/*
+!models/README.md
+!models/*.py
+!models/*.sha256
+dashboard/dist/
+node_modules/
+*.sqlite
+*.db

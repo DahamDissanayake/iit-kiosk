@@ -1,0 +1,61 @@
+[display]
+rotation = 90
+
+[vision]
+backend = "ncnn"            # "ncnn" or "openvino"
+imgsz = 320
+fps_idle = 8
+fps_engaged = 2
+min_box_height_frac = 0.25  # box height / frame height to count as in zone
+approach_growth = 0.15      # box height growth over the window = approaching
+approach_window_s = 1.5
+dwell_s = 1.5
+centre_band = 0.5           # fraction of frame width counted as "in front"
+depart_empty_s = 3
+
+[engagement]
+greet_cooldown_s = 20
+silence_followup_s = 8
+max_followups = 1
+farewell_silent_s = 2       # how long the silent wave lasts when a visitor walks away
+kids_default = false
+
+[voice]
+stt_model = "moonshine-small-streaming-en"
+vad_threshold = 0.5
+tts_voice = "en_US-lessac-medium"
+mic_device = "PowerConf"     # match by name
+output_device = "USB Audio"
+
+[llm]
+provider = "gemini"          # "gemini", "anthropic" or "openai"
+model = ""                   # set once IIT picks the provider
+timeout_s = 6
+max_sentences = 3
+
+[rag]
+embed_model = "BAAI/bge-small-en-v1.5"
+chunk_tokens = 250
+chunk_overlap = 40
+top_k = 4
+min_score = 0.5              # placeholder, tune on the 20 test questions
+
+[audio]
+music_volume = 0.25
+duck_ratio = 0.35
+fade_in_s = 2.5
+
+[admin]
+port = 8080
+settings_hold_s = 3
+session_idle_s = 300
+pin_max_tries = 5
+lockout_s = 300
+
+[privacy]
+log_unmatched_questions = false
+unmatched_retention_days = 30
+
+[ui]
+port = 8765
+music_url = ""               # set when IIT supplies the music file
