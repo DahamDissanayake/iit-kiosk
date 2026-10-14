@@ -1,1 +1,134 @@
-<!doctype html><title>IIT Visitor Assistant</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IIT Visitor Assistant</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="stage" id="root" data-state="idle" data-camera="on">
+  <div class="studio" aria-hidden="true"></div>
+
+  <header class="top">
+    <div class="logos">
+      <img src="assets/logo-iit.svg" alt="IIT">
+      <img src="assets/logo-leapgen.svg" alt="LeapGen">
+    </div>
+    <div class="privacy"><i></i><span id="privacyText"></span></div>
+  </header>
+
+  <main class="scene">
+    <div class="bubble hide" id="bubble" aria-live="polite"></div>
+    <div class="thinking" aria-hidden="true"><b></b><b></b><b></b></div>
+    <svg class="bot" viewBox="0 0 400 600" role="img" aria-label="Assistant robot">
+      <defs>
+        <radialGradient id="shell" cx="38%" cy="28%" r="80%">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset=".55" stop-color="#F1F3F6"/>
+          <stop offset="1" stop-color="#C9D0DA"/>
+        </radialGradient>
+        <radialGradient id="visor" cx="45%" cy="35%" r="75%">
+          <stop offset="0" stop-color="#2A2F38"/>
+          <stop offset=".6" stop-color="#0E1015"/>
+          <stop offset="1" stop-color="#050609"/>
+        </radialGradient>
+        <radialGradient id="floorShadow">
+          <stop offset="0" stop-color="#000" stop-opacity=".22"/>
+          <stop offset="1" stop-color="#000" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <ellipse class="shadow" cx="200" cy="560" rx="95" ry="14" fill="url(#floorShadow)"/>
+
+      <g id="bot">
+        <path id="armL" d="M86 300 C70 330 66 400 84 440 C92 456 104 452 108 436 C116 396 112 330 100 302 C96 292 90 292 86 300 Z" fill="url(#shell)"/>
+        <g id="body">
+          <path d="M200 262 C268 262 302 292 302 344 C302 424 256 500 200 506 C144 500 98 424 98 344 C98 292 132 262 200 262 Z" fill="url(#shell)"/>
+          <path d="M140 286 C160 274 190 270 214 272" stroke="#fff" stroke-width="9" stroke-linecap="round" fill="none" opacity=".85"/>
+          <circle class="ring" cx="200" cy="338" r="20" fill="none" stroke="var(--red)" stroke-width="3"/>
+          <circle cx="200" cy="338" r="20" fill="none" stroke="var(--red)" stroke-width="4"/>
+          <text class="badge-text" x="200" y="343" text-anchor="middle">IIT</text>
+        </g>
+        <path id="armR" d="M314 300 C330 330 334 400 316 440 C308 456 296 452 292 436 C284 396 288 330 300 302 C304 292 310 292 314 300 Z" fill="url(#shell)"/>
+
+        <g id="head">
+          <g id="headTilt">
+            <ellipse cx="200" cy="160" rx="124" ry="94" fill="url(#shell)"/>
+            <path d="M110 120 C128 92 160 78 196 76" stroke="#fff" stroke-width="9" stroke-linecap="round" fill="none" opacity=".9"/>
+            <ellipse cx="200" cy="172" rx="96" ry="60" fill="url(#visor)"/>
+            <path d="M126 150 C140 128 170 118 200 118" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".18"/>
+            <g id="eyes" filter="url(#glow)">
+              <g id="eyesOpen">
+                <ellipse id="eyeL" cx="164" cy="168" rx="22" ry="13" transform="rotate(12 164 168)" fill="var(--eye)"/>
+                <ellipse id="eyeR" cx="236" cy="168" rx="22" ry="13" transform="rotate(-12 236 168)" fill="var(--eye)"/>
+              </g>
+              <g id="eyesHappy" fill="none" stroke="var(--eye)" stroke-width="7" stroke-linecap="round">
+                <path d="M144 174 Q164 152 184 174"/>
+                <path d="M216 174 Q236 152 256 174"/>
+              </g>
+            </g>
+            <rect id="mouth" x="190" y="204" width="20" height="4" rx="2" fill="var(--eye)" filter="url(#glow)" opacity="0"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+  </main>
+
+  <footer class="bottom">
+    <div class="ticker" id="ticker"></div>
+    <div class="actions">
+      <button class="talk" id="talk" type="button"><span class="dot"></span><span id="talkLabel"></span></button>
+      <button class="pill" id="kids" type="button" aria-pressed="false"></button>
+    </div>
+  </footer>
+
+  <button class="gear" id="gear" type="button" aria-label="Staff settings, press and hold">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <circle class="hold" cx="24" cy="24" r="21"/>
+      <g transform="translate(24 24)" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" fill="none">
+        <circle r="7"/>
+        <circle r="2.6"/>
+        <path d="M0-10.5V-13M0 10.5V13M-10.5 0H-13M10.5 0H13M-7.4-7.4-9.2-9.2M7.4 7.4 9.2 9.2M-7.4 7.4-9.2 9.2M7.4-7.4 9.2-9.2"/>
+      </g>
+    </svg>
+  </button>
+
+  <section class="sheet" id="sheet" aria-hidden="true">
+    <h2 id="sheetTitle"></h2>
+    <div class="grid" id="menuItems"></div>
+    <button class="pill" id="sheetClose" type="button"></button>
+  </section>
+
+  <section class="dev" id="dev" hidden>
+    <h3>Visitor</h3>
+    <div class="row">
+      <button type="button" data-dev="approach">Approach</button>
+      <button type="button" data-dev="group">Group of 2</button>
+      <button type="button" data-dev="linger">Linger</button>
+      <button type="button" data-dev="walkpast">Walk past</button>
+      <button type="button" data-dev="leave">Leave</button>
+    </div>
+    <h3>Ask</h3>
+    <form class="row" id="devAsk">
+      <input id="devQuestion" placeholder="Type a question" autocomplete="off">
+      <button type="submit">Ask</button>
+    </form>
+    <h3>Faults</h3>
+    <div class="row">
+      <button type="button" data-dev="camera" data-ok="false">Camera fail</button>
+      <button type="button" data-dev="internet" data-ok="false">Internet fail</button>
+    </div>
+    <h3>Preview state (UI only)</h3>
+    <div class="row" id="devStates"></div>
+    <h3>Mouth level</h3>
+    <div class="meter"><i id="devMeter"></i></div>
+  </section>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
