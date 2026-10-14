@@ -10,10 +10,10 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
-from core.answer import CannedAnswerer
 from core.controller.machine import Controller, ControllerConfig
 from core.runtime import Runtime
-from core.speech import FakeSpeech
+from core.services import Services, build_services
+from core.store.events import SessionRecorder
 
 UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
@@ -38,17 +38,20 @@ class Hub:
                 self._clients.discard(ws)
 
 
-def create_app(cfg: dict, dev: bool = False) -> FastAPI:
+def create_app(cfg: dict, dev: bool = False, services: Services | None = None) -> FastAPI:
+    services = services or build_services(cfg, dev=dev)
     hub = Hub()
     music_url = cfg["ui"].get("music_url")
     music = {"url": music_url, "volume": cfg["audio"]["music_volume"]} if music_url else None
     runtime = Runtime(
         Controller(ControllerConfig.from_config(cfg)),
-        FakeSpeech(),
-        CannedAnswerer(),
+        services.speech,
+        services.answerer,
         hub.broadcast,
         dev=dev,
         music=music,
+        record=SessionRecorder(services.events),
+        menu_source=services.kb.menu_items,
     )
 
     @asynccontextmanager

@@ -1,15 +1,26 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from core.app import create_app
 from core.config import load_config
+from core.rag.embed import HashEmbedder
+from core.services import build_services
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def isolated_dirs(tmp_path, monkeypatch):
+    monkeypatch.setenv("KIOSK_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("KIOSK_MODELS_DIR", str(tmp_path / "models"))
+
+
 def app(dev=True):
-    return create_app(load_config(ROOT / "config.toml"), dev=dev)
+    cfg = load_config(ROOT / "config.toml")
+    services = build_services(cfg, dev=dev, embedder=HashEmbedder(), env={})
+    return create_app(cfg, dev=dev, services=services)
 
 
 def read_until(ws, pred, limit=500):

@@ -113,3 +113,11 @@ def test_fastembed_bge_small_produces_384_dim_vectors(tmp_path):
     e = FastEmbedder("BAAI/bge-small-en-v1.5", cache_dir=tmp_path)
     assert len(e.query("hello")) == 384
     assert len(e.passages(["a", "b"])) == 2
+
+
+def test_menu_items_are_not_matched_by_voice_questions_by_default():
+    k = kb()
+    k.add_text("Programmes", "IIT offers BSc degrees in computing and business.")
+    menu_id = k.add_menu("What's on today?", "Placeholder answer about today's events.")
+    assert all(h.source_id != menu_id for h in k.search("what is on today"))
+    assert k.search("what is on today", include_menu=True)[0].source_id == menu_id

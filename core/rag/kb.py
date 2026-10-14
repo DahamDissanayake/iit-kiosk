@@ -174,7 +174,10 @@ class KnowledgeBase:
         )
         return [MenuItem(str(r["id"]), r["title"], r["body"]) for r in rows]
 
-    def search(self, query: str, k: int = 4) -> list[Hit]:
+    def search(self, query: str, k: int = 4, include_menu: bool = False) -> list[Hit]:
+        """Nearest chunks of enabled sources. Touch-menu items are tap-to-hear answers, so voice
+        questions skip them by default: short generic menu questions ("What's on today?") score
+        high against unrelated questions and would let off-topic ones past the threshold."""
         if self.needs_reindex():
             raise ModelMismatch("Embedding model changed: re-index the knowledge base.")
         vec = serialize_float32(self.embedder.query(query))
@@ -191,8 +194,8 @@ class KnowledgeBase:
             rows = self.db.conn.execute(
                 "SELECT c.id, c.source_id, s.title, c.heading, c.text FROM chunks c"
                 " JOIN sources s ON s.id = c.source_id"
-                f" WHERE s.enabled = 1 AND c.id IN ({marks})",
-                list(distance),
+                f" WHERE s.enabled = 1 AND (? OR s.kind != 'menu') AND c.id IN ({marks})",
+                [include_menu, *distance],
             ).fetchall()
         hits = [
             Hit(

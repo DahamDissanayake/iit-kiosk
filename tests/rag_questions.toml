@@ -1,0 +1,22 @@
+# Threshold tuning for rag.min_score (baseline 5.5).
+# When IIT's approved content and top 20 FAQs arrive (due 16 Oct), add one
+# [[question]] per FAQ with the title of the source that should answer it.
+#
+# [[question]]
+# text = "What undergraduate programmes does IIT offer?"
+# source = "Programmes"
+
+[[off_topic]]
+text = "What's the weather like on Mars?"
+
+[[off_topic]]
+text = "Can you recommend a good pizza place?"
+
+[[off_topic]]
+text = "Who won the cricket match yesterday?"
+
+[[off_topic]]
+text = "How do I fix my car's engine?"
+
+[[off_topic]]
+text = "Tell me a joke about cats."
