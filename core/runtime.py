@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 from core import __version__
 from core.answer import Answerer, AnswerError
 from core.controller.machine import Controller
+from core.controller.phrases import MenuItem
 from core.controller.types import (
     AnswerDone,
     AnswerFailed,
@@ -48,6 +49,7 @@ class Runtime:
         music: dict | None = None,
         clock: Callable[[], float] = time.monotonic,
         record: Callable[[str, float | None], None] | None = None,
+        menu_source: Callable[[], list[MenuItem]] | None = None,
     ) -> None:
         self.c = controller
         self.answerer = answerer
@@ -55,6 +57,7 @@ class Runtime:
         self.dev = dev
         self.music = music
         self.clock = clock
+        self.menu_source = menu_source
         self.record = record or (lambda kind, value: log.info("event %s %s", kind, value))
         self.mic_muted = True
         self.vision_fps: float | None = None
@@ -65,7 +68,12 @@ class Runtime:
 
     # ---- lifecycle ----
 
+    def refresh_menu(self) -> None:
+        if self.menu_source:
+            self.c.set_menu(self.menu_source())
+
     def start(self) -> None:
+        self.refresh_menu()
         self._spawn(self._tick_loop())
         self._spawn(self.voice.run())
 
