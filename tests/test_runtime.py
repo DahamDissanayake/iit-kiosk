@@ -2,6 +2,7 @@ import asyncio
 
 from core.answer import CannedAnswerer
 from core.controller.machine import Controller, ControllerConfig
+from core.controller.phrases import MenuItem
 from core.runtime import Runtime
 from core.speech import FakeSpeech
 
@@ -115,3 +116,21 @@ def test_snapshot_ends_with_current_state():
     assert snap[-1] == {"type": "state", "state": "idle"}
     assert {"type": "dev", "enabled": True} in snap
     assert {"type": "camera", "ok": True} in snap
+
+
+def test_runtime_loads_menu_from_source_on_start():
+    async def go():
+        sent = Collect()
+        items = [MenuItem("1", "Label", "Answer")]
+        rt = Runtime(
+            Controller(ControllerConfig()),
+            FakeSpeech(),
+            CannedAnswerer(delay_s=0),
+            sent,
+            menu_source=lambda: items,
+        )
+        rt.start()
+        assert rt.c.menu == tuple(items)
+        await rt.stop()
+
+    asyncio.run(go())

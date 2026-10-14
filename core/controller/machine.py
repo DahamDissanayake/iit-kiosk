@@ -8,7 +8,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass
 
-from core.controller.phrases import PHRASES, Phrases, is_decline
+from core.controller.phrases import PHRASES, MenuItem, Phrases, is_decline
 from core.controller.types import (
     AnswerDone,
     AnswerFailed,
@@ -70,6 +70,7 @@ class Controller:
     def __init__(self, cfg: ControllerConfig, phrases: Phrases = PHRASES) -> None:
         self.cfg = cfg
         self.p = phrases
+        self.menu: tuple[MenuItem, ...] = phrases.menu
         self.state = "idle"
         self.camera_ok = True
         self.count = 0
@@ -94,6 +95,9 @@ class Controller:
         self.got_sentence = False
         self.ask_since: float | None = None
         self.farewell_until: float | None = None
+
+    def set_menu(self, items: list[MenuItem]) -> None:
+        self.menu = tuple(items)
 
     # ---- entry point ----
 
@@ -217,7 +221,7 @@ class Controller:
                 out += [StopSpeech(), CancelAnswer()]
                 self._enter("listening", now, out)
         elif t.event == "menu_item":
-            item = next((m for m in self.p.menu if m.id == t.value), None)
+            item = next((m for m in self.menu if m.id == t.value), None)
             if item is None or s == "farewell":
                 return
             if s in ("idle", "attentive") and self.greeted_at is None:
@@ -327,7 +331,7 @@ class Controller:
     def _fail(self, kind: str, now: float, out: list[Command]) -> None:
         out.append(Record("unmatched" if kind == "unmatched" else "fallback"))
         self._answer_fixed(self.p.unmatched if kind == "unmatched" else self.p.offline, now, out)
-        items = [{"id": m.id, "label": m.label} for m in self.p.menu]
+        items = [{"id": m.id, "label": m.label} for m in self.menu]
         out.append(UiSend({"type": "menu", "show": True, "items": items}))
 
     def _end_turn(self, now: float, out: list[Command]) -> None:
