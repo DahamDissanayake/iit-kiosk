@@ -12,6 +12,10 @@ approach_window_s = 1.5
 dwell_s = 1.5
 centre_band = 0.5           # fraction of frame width counted as "in front"
 depart_empty_s = 3
+conf = 0.4                  # person confidence threshold
+threads = 2
+mirror = true               # flip x so the eyes look at the visitor; check on site
+preview_hz = 4              # box preview rate for the dashboard calibration view
 
 [engagement]
 greet_cooldown_s = 20
