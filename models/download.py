@@ -14,6 +14,7 @@ import httpx
 
 PIPER = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium"
 FILES = {
+    "silero_vad.onnx": "https://github.com/snakers4/silero-vad/raw/v5.1.2/src/silero_vad/data/silero_vad.onnx",
     "piper/en_US-lessac-medium.onnx": f"{PIPER}/en_US-lessac-medium.onnx",
     "piper/en_US-lessac-medium.onnx.json": f"{PIPER}/en_US-lessac-medium.onnx.json",
 }

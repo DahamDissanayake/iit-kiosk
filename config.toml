@@ -30,6 +30,9 @@ vad_threshold = 0.5
 tts_voice = "en_US-lessac-medium"
 mic_device = "PowerConf"     # match by name
 output_device = "USB Audio"
+mode = "inprocess"           # "inprocess" or "service" (decided from Pi benchmarks)
+end_silence_ms = 700
+partial_every_s = 1.5        # 0 turns live transcript off
 
 [llm]
 provider = "gemini"          # "gemini", "anthropic" or "openai"
