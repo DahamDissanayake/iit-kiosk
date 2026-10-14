@@ -1,0 +1,606 @@
+<title>IIT Visitor Bot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans+Sinhala:wght@500&family=Noto+Sans+Tamil:wght@500&display=swap">
+<style>
+/* Layout: one fullscreen stage. Bot in the middle, speech bubble beside its head,
+   status chips on top, rotating info strip + language chips along the bottom.
+   Single dark look on purpose: it runs on a kiosk display in a hall. */
+:root {
+  --bg: #0A1226;
+  --bg-2: #13234A;
+  --shell: #EEF2F9;
+  --shell-shade: #B6C3D9;
+  --visor: #081028;
+  --led: #5CE1FF;
+  --led-soft: rgba(92, 225, 255, .18);
+  --warm: #FFB547;
+  --ink: #E9EFFA;
+  --muted: #8B9CBC;
+  --panel: rgba(16, 28, 58, .92);
+  --line: rgba(139, 156, 188, .25);
+  --f-display: "Fredoka", "Baloo 2", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --f-si: "Noto Sans Sinhala", "Iskoola Pota", sans-serif;
+  --f-ta: "Noto Sans Tamil", "Latha", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 38%, var(--bg-2) 0%, var(--bg) 62%) var(--bg);
+  color: var(--ink); font-family: var(--f-body);
+  -webkit-user-select: none; user-select: none;
+}
+.stage {
+  height: 100%; box-sizing: border-box;
+  display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
+  padding-block: 18px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* top bar */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { font-family: var(--f-display); font-weight: 600; font-size: clamp(15px, 1.6vw, 22px); letter-spacing: .02em; }
+.brand span { color: var(--led); }
+.privacy {
+  display: flex; align-items: center; gap: 8px;
+  font-size: clamp(11px, 1.05vw, 14px); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+}
+.privacy i { width: 8px; height: 8px; border-radius: 50%; background: var(--led); box-shadow: 0 0 0 3px var(--led-soft); }
+[data-camera="off"] .privacy i { background: var(--muted); box-shadow: none; }
+
+/* middle */
+.middle { position: relative; display: grid; place-items: center; min-height: 0; }
+.bot-wrap { position: relative; height: min(100%, 72vh); aspect-ratio: 400 / 470; max-width: 100%; }
+.bot-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+.bubble {
+  position: absolute; left: 78%; top: 6%;
+  width: min(40vw, 460px); box-sizing: border-box;
+  background: var(--shell); color: var(--visor);
+  border-radius: 28px 28px 28px 8px; padding: 18px 22px;
+  font-family: var(--f-display); font-weight: 500; font-size: clamp(16px, 2vw, 28px); line-height: 1.3;
+  text-wrap: balance;
+  transform-origin: 0% 100%;
+  transition: opacity .35s ease, transform .35s cubic-bezier(.3, 1.4, .5, 1);
+}
+.bubble.hide { opacity: 0; transform: scale(.85) translateY(10px); }
+.bubble [lang="si"] , .bubble:lang(si) { font-family: var(--f-si); }
+.bubble:lang(ta) { font-family: var(--f-ta); }
+.bubble small { display: block; margin-top: 8px; font-family: var(--f-body); font-size: .55em; color: #4A5A7A; }
+
+.thinking-dots { position: absolute; left: 76%; top: 14%; display: flex; gap: 10px; opacity: 0; transition: opacity .25s; }
+.thinking-dots b { width: 16px; height: 16px; border-radius: 50%; background: var(--led); animation: dot 1.1s infinite ease-in-out; }
+.thinking-dots b:nth-child(2) { animation-delay: .15s } .thinking-dots b:nth-child(3) { animation-delay: .3s }
+[data-state="thinking"] .thinking-dots { opacity: 1 }
+@keyframes dot { 0%, 100% { transform: translateY(0); opacity: .4 } 50% { transform: translateY(-10px); opacity: 1 } }
+
+/* bottom */
+.bottom { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; }
+.mic { position: relative; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); }
+.mic svg { width: 28px; height: 28px; }
+.mic::before, .mic::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--led); opacity: 0; }
+[data-state="idle"] .mic::before { animation: ring 3.2s infinite ease-out; }
+[data-state="listening"] .mic { border-color: var(--led); }
+[data-state="listening"] .mic::before, [data-state="listening"] .mic::after { animation: ring 1.2s infinite ease-out; }
+[data-state="listening"] .mic::after { animation-delay: .6s; }
+@keyframes ring { 0% { transform: scale(1); opacity: .7 } 100% { transform: scale(1.7); opacity: 0 } }
+
+.ticker { min-width: 0; font-size: clamp(14px, 1.7vw, 24px); color: var(--ink); }
+.ticker .prompt { font-family: var(--f-display); font-weight: 600; color: var(--warm); }
+.ticker .line { transition: opacity .5s; }
+.ticker .line.fade { opacity: 0; }
+.journey { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-family: var(--f-display); font-weight: 500; }
+.journey span { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); transition: all .4s; }
+.journey span.on { color: var(--visor); background: var(--led); border-color: var(--led); }
+.journey em { font-style: normal; color: var(--muted); }
+
+.langs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.chip {
+  font: 600 clamp(14px, 1.4vw, 18px) var(--f-display);
+  color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 10px 16px; min-height: 44px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--visor); border-color: var(--ink); }
+.chip.si { font-family: var(--f-si); } .chip.ta { font-family: var(--f-ta); }
+.chip.kids[aria-pressed="true"] { background: var(--warm); border-color: var(--warm); }
+.chip:focus-visible, .dev button:focus-visible, .gear:focus-visible { outline: 3px solid var(--warm); outline-offset: 2px; }
+
+/* ---------- bot animation (CSS drives state, JS drives mouth + eyes) ---------- */
+#bot { animation: breathe 4.2s ease-in-out infinite; transform-origin: 200px 440px; }
+@keyframes breathe { 0%, 100% { transform: translateY(0) scale(1, 1) } 50% { transform: translateY(-6px) scale(1.005, .995) } }
+#head { transition: transform .6s cubic-bezier(.3, 1.3, .5, 1); transform-origin: 200px 270px; }
+[data-state="attentive"] #head, [data-state="listening"] #head { transform: rotate(-4deg); }
+[data-state="thinking"] #head { transform: rotate(5deg) translateY(-4px); }
+.tip { animation: tip 2.6s ease-in-out infinite; }
+.tip.b { animation-delay: 1.3s; }
+[data-state="listening"] .tip, [data-state="thinking"] .tip { animation-duration: .8s; }
+@keyframes tip { 0%, 100% { opacity: .55 } 50% { opacity: 1 } }
+#armR { transform-origin: 268px 318px; transition: transform .5s; }
+[data-state="greeting"] #armR, [data-state="farewell"] #armR { animation: wave 1.1s ease-in-out 2; }
+@keyframes wave { 0%, 100% { transform: rotate(-130deg) } 50% { transform: rotate(-100deg) } }
+[data-state="greeting"] #armR, [data-state="farewell"] #armR { transform: rotate(-130deg); }
+#eyesHappy { opacity: 0; transition: opacity .2s; }
+#eyesOpen { transition: opacity .2s; }
+[data-state="greeting"] #eyesHappy, [data-state="farewell"] #eyesHappy { opacity: 1 }
+[data-state="greeting"] #eyesOpen, [data-state="farewell"] #eyesOpen { opacity: 0 }
+.visor-glow { opacity: .35; transition: opacity .4s; }
+[data-state="listening"] .visor-glow, [data-state="speaking"] .visor-glow { opacity: .8; }
+.badge-ring { transition: stroke-width .3s; }
+[data-state="speaking"] .badge-ring { stroke-width: 5; }
+
+/* ---------- developer panel (press D or the gear) ---------- */
+.gear {
+  position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--panel); color: var(--muted); cursor: pointer; font-size: 18px; opacity: .5;
+}
+.gear:hover { opacity: 1 }
+.dev {
+  position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(70px + env(safe-area-inset-top, 0px));
+  width: min(320px, calc(100vw - 32px)); max-height: calc(100% - 190px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px;
+  display: grid; gap: 12px; font-size: 13px; color: var(--muted); backdrop-filter: blur(6px);
+}
+.dev h3 { margin: 0; font: 600 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+.dev .row { display: flex; flex-wrap: wrap; gap: 6px; }
+.dev button, .dev label.file {
+  font: 600 12px var(--f-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer;
+}
+.dev button.cur { background: var(--led); color: var(--visor); border-color: var(--led); }
+.dev label.file input { display: none; }
+.meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--led); }
+.dev p { margin: 0; line-height: 1.45; }
+.dev code { color: var(--ink); }
+
+@media (max-width: 720px) {
+  .bubble { left: 8%; right: 8%; top: auto; bottom: 92%; width: auto; border-radius: 24px; }
+  .thinking-dots { left: 50%; top: -4%; transform: translateX(-50%); }
+  .bottom { grid-template-columns: auto 1fr; }
+  .langs { grid-column: 1 / -1; justify-content: center; }
+  .bot-wrap { height: min(100%, 50vh); }
+  .middle { padding-top: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #bot, .tip, .thinking-dots b, .mic::before, .mic::after { animation: none !important; }
+}
+</style>
+
+<div class="stage" id="root" data-state="idle" data-camera="on">
+  <header class="top">
+    <div class="brand">IIT <span>Visitor Assistant</span></div>
+    <div class="privacy" id="privacy"><i></i><span id="privacyText">Camera checks presence only. No photos or video are saved.</span></div>
+  </header>
+
+  <main class="middle">
+    <div class="bot-wrap">
+      <svg viewBox="0 0 400 470" aria-label="Animated assistant robot" role="img">
+        <ellipse cx="200" cy="452" rx="110" ry="12" fill="#000" opacity=".35"/>
+        <g id="bot">
+          <!-- left arm (resting) -->
+          <g>
+            <rect x="96" y="300" width="40" height="86" rx="20" fill="var(--shell-shade)"/>
+            <circle cx="116" cy="392" r="22" fill="var(--shell)"/>
+          </g>
+          <!-- body -->
+          <rect x="128" y="282" width="144" height="130" rx="56" fill="var(--shell)"/>
+          <path d="M140 380 Q200 420 260 380 L260 400 Q200 430 140 400Z" fill="var(--shell-shade)" opacity=".55"/>
+          <circle cx="200" cy="340" r="30" fill="var(--visor)"/>
+          <circle class="badge-ring" cx="200" cy="340" r="30" fill="none" stroke="var(--led)" stroke-width="3"/>
+          <text x="200" y="348" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="22" fill="var(--led)">IIT</text>
+          <!-- right arm (waves) -->
+          <g id="armR">
+            <rect x="248" y="300" width="40" height="86" rx="20" fill="var(--shell-shade)"/>
+            <circle cx="268" cy="392" r="22" fill="var(--shell)"/>
+          </g>
+          <!-- neck -->
+          <rect x="176" y="262" width="48" height="28" rx="10" fill="var(--shell-shade)"/>
+
+          <g id="head">
+            <!-- antennas -->
+            <line x1="150" y1="78" x2="136" y2="30" stroke="var(--visor)" stroke-width="7" stroke-linecap="round"/>
+            <line x1="250" y1="78" x2="264" y2="30" stroke="var(--visor)" stroke-width="7" stroke-linecap="round"/>
+            <circle class="tip" cx="136" cy="26" r="11" fill="var(--led)"/>
+            <circle class="tip b" cx="264" cy="26" r="11" fill="var(--led)"/>
+            <!-- ear pods -->
+            <circle cx="66" cy="168" r="30" fill="var(--shell-shade)"/>
+            <circle cx="66" cy="168" r="18" fill="var(--visor)" stroke="var(--led)" stroke-width="4"/>
+            <circle cx="334" cy="168" r="30" fill="var(--shell-shade)"/>
+            <circle cx="334" cy="168" r="18" fill="var(--visor)" stroke="var(--led)" stroke-width="4"/>
+            <!-- shell -->
+            <rect x="70" y="62" width="260" height="212" rx="104" fill="var(--shell)"/>
+            <path d="M92 120 Q110 76 170 70" stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none" opacity=".8"/>
+            <!-- visor -->
+            <rect x="98" y="96" width="204" height="146" rx="68" fill="var(--visor)"/>
+            <rect class="visor-glow" x="98" y="96" width="204" height="146" rx="68" fill="none" stroke="var(--led)" stroke-width="3"/>
+            <!-- eyes -->
+            <g id="eyes">
+              <g id="eyesOpen">
+                <ellipse id="eyeL" cx="160" cy="158" rx="15" ry="21" fill="var(--led)"/>
+                <ellipse id="eyeR" cx="240" cy="158" rx="15" ry="21" fill="var(--led)"/>
+              </g>
+              <g id="eyesHappy" fill="none" stroke="var(--led)" stroke-width="9" stroke-linecap="round">
+                <path d="M142 164 Q160 140 178 164"/>
+                <path d="M222 164 Q240 140 258 164"/>
+              </g>
+            </g>
+            <!-- cheeks -->
+            <ellipse cx="128" cy="200" rx="13" ry="8" fill="var(--warm)" opacity=".35"/>
+            <ellipse cx="272" cy="200" rx="13" ry="8" fill="var(--warm)" opacity=".35"/>
+            <!-- mouth: path rebuilt every frame from audio level -->
+            <path id="mouth" d="" fill="var(--led)"/>
+          </g>
+        </g>
+      </svg>
+      <div class="bubble hide" id="bubble" aria-live="polite"></div>
+      <div class="thinking-dots" aria-hidden="true"><b></b><b></b><b></b></div>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="mic" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--led)" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </div>
+    <div class="ticker" id="ticker"><div class="line" id="tickerLine"></div></div>
+    <div class="langs" role="group" aria-label="Language">
+      <button class="chip" data-lang="en" aria-pressed="true">English</button>
+      <button class="chip si" data-lang="si" aria-pressed="false">සිංහල</button>
+      <button class="chip ta" data-lang="ta" aria-pressed="false">தமிழ்</button>
+      <button class="chip kids" id="kidsBtn" aria-pressed="false">Kids</button>
+    </div>
+  </footer>
+</div>
+
+<button class="gear" id="gear" aria-label="Open developer panel" title="Developer panel (D)">⚙</button>
+<section class="dev" id="dev" hidden>
+  <h3>States</h3>
+  <div class="row" id="stateBtns"></div>
+  <h3>Encounter demo</h3>
+  <div class="row">
+    <button id="simVisitor">Visitor approaches</button>
+    <button id="simLeave">Visitor leaves</button>
+    <button id="camToggle">Camera fail</button>
+  </div>
+  <h3>Lip sync</h3>
+  <div class="row">
+    <button id="toneTest">Speech-like tone</button>
+    <button id="browserTts">Browser TTS</button>
+    <label class="file">Play audio file<input type="file" id="audioFile" accept="audio/*"></label>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <p>The tone and audio file paths run through the same <code>AnalyserNode</code> the real TTS audio will use, so the mouth follows true loudness. Browser TTS cannot be analysed, so that button fakes the envelope.</p>
+  <p>On the Pi, the backend talks to this page over <code>ws://localhost:8765</code>. See <code>window.kiosk</code> in the console.</p>
+</section>
+
+<script>
+(() => {
+  const root = document.getElementById('root');
+  const bubble = document.getElementById('bubble');
+  const mouth = document.getElementById('mouth');
+  const eyeL = document.getElementById('eyeL'), eyeR = document.getElementById('eyeR');
+  const eyesG = document.getElementById('eyes');
+  const meter = document.getElementById('meter');
+
+  /* ---------------- copy ---------------- */
+  // Sinhala and Tamil lines are the spec's proposed copy and still need review by fluent speakers.
+  const COPY = {
+    en: {
+      greet: "Hi! Welcome to IIT. I'm your digital assistant. Would you like to explore our campus, discover our courses, or learn how LeapGen helps turn ideas into startups?",
+      group: "Hello everyone! Welcome to IIT. Would you like to explore our courses or try a quick startup challenge?",
+      followup: "Feel free to explore whenever you're ready.",
+      listening: "I'm listening…",
+      bye: "Thank you for stopping by. Have a wonderful day!",
+      prompt: "Come closer and say Hello!",
+      privacy: "Camera checks presence only. No photos or video are saved.",
+      privacyOff: "Camera unavailable. Tap a language to start."
+    },
+    si: {
+      greet: "ආයුබෝවන්! IIT වෙත සාදරයෙන් පිළිගන්නවා! Would you like to discover something exciting about IIT or startups?",
+      followup: "Feel free to explore whenever you're ready.",
+      listening: "අහගෙන ඉන්නවා…",
+      bye: "ස්තූතියි! Have a wonderful day!",
+      prompt: "ළඟට ඇවිත් Hello කියන්න!"
+    },
+    ta: {
+      greet: "வணக்கம்! IIT-க்கு உங்களை அன்புடன் வரவேற்கிறோம்! Would you like to explore our courses or discover how to start a business?",
+      followup: "Feel free to explore whenever you're ready.",
+      listening: "கேட்டுக்கொண்டிருக்கிறேன்…",
+      bye: "நன்றி! Have a wonderful day!",
+      prompt: "அருகில் வந்து Hello சொல்லுங்கள்!"
+    },
+    kids: {
+      greet: "Hi, young innovator! 👋 Have you ever had an idea to make your school or neighbourhood better? Let's explore how your idea could become something amazing!",
+      followup: "Want to try a fun startup challenge?",
+      bye: "That's okay! Thanks for visiting. Keep being curious!",
+      prompt: "If you could invent anything, what would it be?"
+    }
+  };
+  const TICKER = [
+    { prompt: true },
+    { text: "Ask me about IIT's degree programmes and campus life." },
+    { journey: true },
+    { text: "Curious about research at IIT? Just ask." },
+    { text: "LeapGen helps students turn ideas into real startups." }
+  ];
+
+  let lang = 'en', kids = false;
+  const t = (key) => (kids && COPY.kids[key]) || COPY[lang][key] || COPY.en[key];
+
+  /* ---------------- state machine (visual side) ---------------- */
+  const STATES = ['idle', 'attentive', 'greeting', 'listening', 'thinking', 'speaking', 'farewell'];
+  let state = 'idle';
+  function setState(s, opts = {}) {
+    if (!STATES.includes(s)) return;
+    state = s; root.dataset.state = s;
+    document.querySelectorAll('#stateBtns button').forEach(b => b.classList.toggle('cur', b.dataset.s === s));
+    if (opts.text !== undefined) say(opts.text);
+    else if (s === 'idle' || s === 'attentive') say(null);
+    else if (s === 'greeting') say(t('greet'));
+    else if (s === 'listening') say(t('listening'));
+    else if (s === 'farewell') say(t('bye'));
+    else if (s === 'thinking') say(null);
+    music.forState(s);
+    send({ type: 'ui', event: 'state', value: s });
+  }
+  function say(text) {
+    if (!text) { bubble.classList.add('hide'); return; }
+    bubble.lang = kids ? 'en' : lang;
+    bubble.textContent = text;
+    bubble.classList.remove('hide');
+  }
+
+  /* ---------------- audio graph ---------------- */
+  let ctx = null, analyser = null, buf = null;
+  let nextTime = 0, activeSources = 0;
+  function audio() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+      analyser.connect(ctx.destination);
+      buf = new Float32Array(analyser.fftSize);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  const live = new Set();
+  function track(src) {
+    activeSources++; live.add(src);
+    src.addEventListener('ended', () => live.delete(src));
+    if (state !== 'greeting' && state !== 'farewell') setState('speaking', { text: bubble.classList.contains('hide') ? null : bubble.textContent });
+    src.onended = () => { activeSources = Math.max(0, activeSources - 1); if (!activeSources) onSpeechEnd(); };
+  }
+  let afterSpeech = 'listening';
+  function onSpeechEnd() {
+    if (state === 'farewell') { setTimeout(() => setState('idle'), 600); return; }
+    setState(afterSpeech);
+  }
+  async function playAudio(input) {
+    const c = audio();
+    let ab = input;
+    if (typeof input === 'string') ab = await (await fetch(input)).arrayBuffer();
+    else if (input instanceof Blob) ab = await input.arrayBuffer();
+    const decoded = await c.decodeAudioData(ab);
+    const src = c.createBufferSource(); src.buffer = decoded; src.connect(analyser);
+    track(src); src.start();
+  }
+  // Streaming path for cloud TTS that returns raw PCM16 chunks (Azure, Gemini Live: 24 kHz mono).
+  function streamPCM(int16, sampleRate = 24000) {
+    const c = audio();
+    const f = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) f[i] = int16[i] / 32768;
+    const b = c.createBuffer(1, f.length, sampleRate); b.copyToChannel(f, 0);
+    const src = c.createBufferSource(); src.buffer = b; src.connect(analyser);
+    nextTime = Math.max(nextTime, c.currentTime + 0.04);
+    src.start(nextTime); nextTime += b.duration;
+    track(src);
+  }
+  function stopSpeech() {
+    nextTime = 0;
+    live.forEach(s => { s.onended = null; try { s.stop(); } catch {} });
+    live.clear();
+    activeSources = 0; synthUntil = 0;
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+  // A babble-like test signal: buzzy source, low-pass, gated in syllable-sized bursts.
+  function toneTest(seconds = 3.2) {
+    const c = audio(), now = c.currentTime + 0.05;
+    const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 150;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const g = c.createGain(); g.gain.value = 0;
+    osc.connect(lp).connect(g).connect(analyser);
+    let tt = now;
+    while (tt < now + seconds) {
+      const syl = 0.12 + Math.random() * 0.12;
+      const pause = Math.random() < 0.18 ? 0.25 : 0.03;
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.linearRampToValueAtTime(0.18 + Math.random() * 0.12, tt + syl * 0.35);
+      g.gain.linearRampToValueAtTime(0.0001, tt + syl);
+      osc.frequency.setValueAtTime(130 + Math.random() * 60, tt);
+      tt += syl + pause;
+    }
+    track(osc); osc.start(now); osc.stop(tt);
+  }
+
+  /* browser speechSynthesis: no audio access, so drive the mouth from a synthetic envelope */
+  let synthUntil = 0;
+  function browserSpeak(text) {
+    if (!('speechSynthesis' in window)) { say('Browser TTS is not available here. Try the speech-like tone.'); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = { en: 'en-US', si: 'si-LK', ta: 'ta-LK' }[lang];
+    u.onstart = () => { synthUntil = Infinity; setState('speaking', { text }); };
+    u.onend = u.onerror = () => { synthUntil = 0; onSpeechEnd(); };
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+
+  /* ---------------- per-frame animation ---------------- */
+  let level = 0;            // smoothed mouth openness 0..1
+  let look = { x: 0, y: 0 }, lookTarget = { x: 0, y: 0 };
+  let blink = 1, nextBlink = performance.now() + 2500;
+  function mouthPath(o) {
+    const cx = 200, y = 204;
+    const w = 32 - o * 8;
+    const smile = 7 * (1 - o) + 2;
+    const open = 3 + o * 30;
+    return `M${cx - w},${y} Q${cx},${y + smile} ${cx + w},${y} Q${cx},${y + smile + open} ${cx - w},${y}Z`;
+  }
+  function frame(now) {
+    let target = 0;
+    if (analyser && activeSources) {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      target = Math.min(1, Math.max(0, (rms - 0.012) * 7));
+    } else if (now < synthUntil) {
+      const s = Math.sin(now / 70) * 0.5 + Math.sin(now / 37) * 0.3 + Math.sin(now / 151) * 0.2;
+      target = Math.max(0, s) * 0.9;
+    }
+    // fast attack, slower release reads as natural jaw motion
+    level += (target - level) * (target > level ? 0.55 : 0.22);
+    mouth.setAttribute('d', mouthPath(level));
+    meter.style.width = (level * 100).toFixed(0) + '%';
+
+    // blink
+    if (now > nextBlink) { blink = 0.1; nextBlink = now + 2200 + Math.random() * 3500; }
+    blink += (1 - blink) * 0.25;
+    // gaze
+    if (state === 'thinking') lookTarget = { x: 0.6, y: -0.8 };
+    look.x += (lookTarget.x - look.x) * 0.08; look.y += (lookTarget.y - look.y) * 0.08;
+    eyesG.setAttribute('transform', `translate(${(look.x * 12).toFixed(1)} ${(look.y * 8).toFixed(1)})`);
+    const ry = 21 * blink * (state === 'listening' ? 1.1 : 1);
+    eyeL.setAttribute('ry', ry.toFixed(1)); eyeR.setAttribute('ry', ry.toFixed(1));
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // x, y in -1..1. On the Pi, feed this from the person's bounding-box centre.
+  function lookAt(x, y = 0) { lookTarget = { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) }; }
+  document.addEventListener('pointermove', e => {
+    if (ws) return; // camera drives gaze when backend is connected
+    lookAt((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
+  });
+
+  /* ---------------- background music with ducking ---------------- */
+  const music = {
+    el: null, gain: null, base: 0.25,
+    set(url) {
+      const c = audio();
+      this.el = new Audio(url); this.el.loop = true; this.el.crossOrigin = 'anonymous';
+      const node = c.createMediaElementSource(this.el);
+      this.gain = c.createGain(); this.gain.gain.value = this.base;
+      node.connect(this.gain).connect(c.destination); // not through analyser, so music never moves the mouth
+      this.el.play().catch(() => {});
+    },
+    ramp(v, secs) { if (!this.gain) return; const c = audio(); this.gain.gain.cancelScheduledValues(c.currentTime); this.gain.gain.linearRampToValueAtTime(v, c.currentTime + secs); },
+    forState(s) {
+      if (s === 'idle') this.ramp(this.base, 2.5);
+      else if (s === 'attentive') this.ramp(this.base * 0.35, 0.6);
+      else this.ramp(0, 0.3);
+    }
+  };
+
+  /* ---------------- idle ticker ---------------- */
+  const line = document.getElementById('tickerLine');
+  let tick = 0, journeyTimer = null;
+  function renderTicker() {
+    clearInterval(journeyTimer);
+    const item = TICKER[tick % TICKER.length];
+    if (item.prompt) line.innerHTML = `<span class="prompt"></span>`, line.firstChild.textContent = t('prompt');
+    else if (item.journey) {
+      line.innerHTML = '<div class="journey"><span>Idea</span><em>→</em><span>Validate</span><em>→</em><span>Build</span><em>→</em><span>Launch</span></div>';
+      const steps = line.querySelectorAll('.journey span'); let k = 0;
+      steps[0].classList.add('on');
+      journeyTimer = setInterval(() => { k = Math.min(k + 1, 3); steps[k].classList.add('on'); }, 1200);
+    } else line.textContent = item.text;
+  }
+  function cycleTicker() {
+    line.classList.add('fade');
+    setTimeout(() => { tick++; renderTicker(); line.classList.remove('fade'); }, 500);
+  }
+  renderTicker();
+  setInterval(cycleTicker, 6500);
+
+  /* ---------------- language + kids chips ---------------- */
+  document.querySelectorAll('.chip[data-lang]').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    document.querySelectorAll('.chip[data-lang]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderTicker();
+    send({ type: 'ui', event: 'language', value: lang });
+    if (state === 'idle') { afterSpeech = 'listening'; setState('greeting'); }
+  }));
+  document.getElementById('kidsBtn').addEventListener('click', e => {
+    kids = !kids; e.currentTarget.setAttribute('aria-pressed', kids);
+    renderTicker(); send({ type: 'ui', event: 'kids', value: kids });
+    if (kids) { afterSpeech = 'listening'; setState('greeting'); }
+  });
+
+  /* ---------------- backend bridge (only when served locally on the Pi) ---------------- */
+  let ws = null;
+  const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:';
+  function connect() {
+    try { ws = new WebSocket('ws://localhost:8765'); } catch { ws = null; return; }
+    ws.onmessage = ev => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === 'state') setState(m.state, m.text !== undefined ? { text: m.text } : {});
+      else if (m.type === 'say') say(m.text);
+      else if (m.type === 'lookAt') lookAt(m.x, m.y || 0);
+      else if (m.type === 'audio') {
+        const bin = atob(m.data); const u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        streamPCM(new Int16Array(u8.buffer), m.sampleRate || 24000);
+      }
+      else if (m.type === 'afterSpeech') afterSpeech = m.state;
+      else if (m.type === 'stopAudio') stopSpeech();
+      else if (m.type === 'camera') { root.dataset.camera = m.ok ? 'on' : 'off'; updatePrivacy(); }
+      else if (m.type === 'music') music.set(m.url);
+    };
+    ws.onclose = () => { ws = null; setTimeout(connect, 2000); };
+    ws.onerror = () => {};
+  }
+  function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+  if (isLocal) connect();
+  function updatePrivacy() {
+    document.getElementById('privacyText').textContent = root.dataset.camera === 'on' ? t('privacy') : COPY.en.privacyOff;
+  }
+
+  /* ---------------- developer panel ---------------- */
+  const dev = document.getElementById('dev');
+  const toggleDev = () => { dev.hidden = !dev.hidden; };
+  document.getElementById('gear').addEventListener('click', toggleDev);
+  addEventListener('keydown', e => { if (e.key === 'd' || e.key === 'D') toggleDev(); });
+  const sb = document.getElementById('stateBtns');
+  STATES.forEach(s => { const b = document.createElement('button'); b.textContent = s; b.dataset.s = s; b.onclick = () => setState(s); sb.appendChild(b); });
+  sb.firstChild.classList.add('cur');
+
+  let simTimers = [];
+  document.getElementById('simVisitor').onclick = () => {
+    simTimers.forEach(clearTimeout); simTimers = [];
+    setState('attentive'); lookAt(-0.5, 0.1);
+    simTimers.push(setTimeout(() => { afterSpeech = 'listening'; setState('greeting'); toneTest(4.5); }, 1500));
+  };
+  document.getElementById('simLeave').onclick = () => {
+    simTimers.forEach(clearTimeout); stopSpeech();
+    setState('farewell'); setTimeout(() => setState('idle'), 2600);
+  };
+  document.getElementById('camToggle').onclick = e => {
+    const on = root.dataset.camera !== 'on';
+    root.dataset.camera = on ? 'on' : 'off';
+    e.currentTarget.textContent = on ? 'Camera fail' : 'Camera restore';
+    updatePrivacy();
+  };
+  document.getElementById('toneTest').onclick = () => { afterSpeech = 'listening'; say(t('greet')); toneTest(); };
+  document.getElementById('browserTts').onclick = () => { afterSpeech = 'listening'; browserSpeak(kids ? COPY.kids.greet : COPY.en.greet); };
+  document.getElementById('audioFile').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    afterSpeech = 'listening';
+    playAudio(f).catch(() => say('That file could not be decoded. Try a WAV or MP3.'));
+    e.target.value = '';
+  };
+
+  window.kiosk = { setState, say, lookAt, playAudio, streamPCM, stopSpeech, toneTest, music, get state() { return state; } };
+})();
+</script>
