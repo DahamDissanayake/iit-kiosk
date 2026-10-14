@@ -14,6 +14,16 @@ uv run python -m core --dev
 Open http://localhost:8765/ in Chromium with the window at 1080 x 1920
 (DevTools device toolbar works). Press `D` to toggle the dev panel.
 
+First time only:
+
+```bash
+uv run python -m models.download          # Piper voice
+echo "LLM_API_KEY=your-key" > .data/.env   # never commit this file
+uv run python -m core.rag.ingest add-file path/to/content.pdf --title "Programmes"
+```
+
+Without a key or voice, `--dev` falls back to canned answers and placeholder audio.
+
 ## Test
 
 ```bash
