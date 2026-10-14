@@ -18,11 +18,13 @@ from core.controller.types import (
     CancelAnswer,
     Event,
     MicMute,
+    MicStatus,
     Presence,
     Record,
     Speak,
     SpeechEnded,
     SpeechFinal,
+    SpeechStarted,
     StopSpeech,
     Tick,
     Touch,
@@ -60,6 +62,7 @@ class Runtime:
         self.menu_source = menu_source
         self.record = record or (lambda kind, value: log.info("event %s %s", kind, value))
         self.mic_muted = True
+        self.mic_listeners: list[Callable[[bool], None]] = []
         self.vision_fps: float | None = None
         self.voice = SpeechQueue(speech, send, self._speech_failed)
         self._lock = asyncio.Lock()
@@ -134,6 +137,23 @@ class Runtime:
         elif action == "internet" and hasattr(self.answerer, "offline"):
             self.answerer.offline = not bool(msg.get("ok"))
 
+    # ---- voice input (VoiceSink) ----
+
+    async def speech_started(self) -> None:
+        await self.handle(SpeechStarted())
+
+    async def partial(self, text: str) -> None:
+        if self.c.state == "listening":
+            await self.send({"type": "stt", "text": text, "final": False})
+
+    async def final(self, text: str) -> None:
+        if text.strip() and self.c.state == "listening":
+            await self.send({"type": "stt", "text": text, "final": True})
+        await self.handle(SpeechFinal(text))
+
+    async def mic_status(self, ok: bool) -> None:
+        await self.handle(MicStatus(ok))
+
     # ---- commands out ----
 
     async def _run(self, commands: list) -> None:
@@ -148,6 +168,8 @@ class Runtime:
                     await self.send({"type": "stopAudio"})
                 case MicMute(muted=muted):
                     self.mic_muted = muted
+                    for listener in self.mic_listeners:
+                        listener(muted)
                 case VisionRate(fps=fps):
                     self.vision_fps = fps
                 case Ask():
