@@ -1,7 +1,9 @@
 """Builds the real (or, in dev, stand-in) components from config."""
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 import httpx
 
@@ -11,12 +13,19 @@ from core.llm.providers import make_provider
 from core.paths import data_dir, models_dir
 from core.rag.embed import Embedder, FastEmbedder
 from core.rag.kb import KnowledgeBase
+from core.runtime import Runtime
 from core.secrets import load_env
 from core.speech import FakeSpeech, SpeechOutput
 from core.store.db import Database
 from core.store.events import EventLog, UnmatchedLog
 
 log = logging.getLogger("kiosk.services")
+
+
+class VoiceHandle(Protocol):
+    def start(self) -> None: ...
+
+    def stop(self) -> None: ...
 
 
 @dataclass
@@ -27,6 +36,7 @@ class Services:
     unmatched: UnmatchedLog
     speech: SpeechOutput
     answerer: Answerer
+    voice: Callable[[Runtime], VoiceHandle] | None = None
 
 
 def build_services(
@@ -35,6 +45,8 @@ def build_services(
     dev: bool = False,
     embedder: Embedder | None = None,
     env: dict[str, str] | None = None,
+    with_voice: bool = True,
+    mic_device: str | None = None,
 ) -> Services:
     data, models = data_dir(cfg), models_dir(cfg)
     env = load_env(data / ".env") if env is None else env
@@ -82,4 +94,16 @@ def build_services(
     else:
         raise RuntimeError(f"Piper voice missing: {voice} (run python -m models.download)")
 
-    return Services(db, kb, events, unmatched, speech, answerer)
+    voice = None
+    if with_voice and cfg["voice"]["mode"] == "inprocess":
+
+        def voice(runtime: Runtime) -> VoiceHandle:
+            import asyncio
+
+            from voice.__main__ import build_pipeline
+
+            pipeline = build_pipeline(cfg, runtime, asyncio.get_running_loop(), mic_device)
+            runtime.mic_listeners.append(pipeline.set_muted)
+            return pipeline
+
+    return Services(db, kb, events, unmatched, speech, answerer, voice)

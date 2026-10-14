@@ -19,8 +19,8 @@ def isolated_dirs(tmp_path, monkeypatch):
 
 def app(dev=True):
     cfg = load_config(ROOT / "config.toml")
-    services = build_services(cfg, dev=dev, embedder=HashEmbedder(), env={})
-    return create_app(cfg, dev=dev, services=services)
+    services = build_services(cfg, dev=dev, embedder=HashEmbedder(), env={}, with_voice=False)
+    return create_app(cfg, dev=dev, services=services, dev_no_voice=True)
 
 
 def read_until(ws, pred, limit=500):
