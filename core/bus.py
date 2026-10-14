@@ -1,9 +1,21 @@
 """Local ZeroMQ links between kiosk services (baseline 7.2): [topic, JSON] frames."""
 
+import asyncio
 import json
+import sys
 
 import zmq
 import zmq.asyncio
+
+
+def use_selector_loop_on_windows() -> None:
+    """pyzmq's asyncio support needs a selector event loop; Windows defaults to the proactor loop.
+
+    Call before asyncio.run() in any process that uses this module. A no-op elsewhere (the Pi
+    runs Linux), so no extra dependency such as tornado is needed.
+    """
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class Publisher:
