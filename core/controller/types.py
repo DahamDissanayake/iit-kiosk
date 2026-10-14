@@ -54,6 +54,16 @@ class CameraStatus:
 
 
 @dataclass(frozen=True)
+class SpeechStarted:
+    """VAD detected the visitor starting to speak."""
+
+
+@dataclass(frozen=True)
+class MicStatus:
+    ok: bool
+
+
+@dataclass(frozen=True)
 class Tick:
     pass
 
@@ -67,6 +77,8 @@ Event = (
     | AnswerFailed
     | Touch
     | CameraStatus
+    | SpeechStarted
+    | MicStatus
     | Tick
 )
 

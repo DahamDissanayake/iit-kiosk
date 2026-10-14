@@ -10,11 +10,13 @@ from core.controller.types import (
     CameraStatus,
     CancelAnswer,
     MicMute,
+    MicStatus,
     Presence,
     Record,
     Speak,
     SpeechEnded,
     SpeechFinal,
+    SpeechStarted,
     StopSpeech,
     Tick,
     Touch,
@@ -426,3 +428,39 @@ def test_menu_comes_from_set_menu():
     s.end_speech(8.0)
     s.at(9.0, Touch("menu_item", "7"))
     assert s.spoken()[-1] == "In Colombo."
+
+
+def test_speaking_visitor_does_not_get_a_follow_up():
+    s = Sim()
+    s.to_listening()
+    s.at(10.0, SpeechStarted())
+    s.at(13.0)
+    assert s.spoken() == [PHRASES.greet]
+
+
+def test_empty_transcript_resumes_silence_timer():
+    s = Sim()
+    s.to_listening()
+    s.at(10.0, SpeechStarted())
+    s.at(13.5, SpeechFinal(""))
+    s.at(21.4)
+    assert s.spoken() == [PHRASES.greet]
+    s.at(21.5)
+    assert s.spoken() == [PHRASES.greet, PHRASES.followup]
+
+
+def test_mic_failure_while_listening_shows_menu():
+    s = Sim()
+    s.to_listening()
+    s.at(5.0, MicStatus(False))
+    assert s.ui("menu", s.out)[0]["show"] is True
+    assert s.c.mic_ok is False
+
+
+def test_entering_listening_with_mic_down_shows_menu():
+    s = Sim()
+    s.at(0.5, MicStatus(False))
+    s.at(1.0, APPROACH)
+    s.end_speech(4.0)
+    assert s.c.state == "listening"
+    assert s.ui("menu", s.out)[0]["show"] is True
