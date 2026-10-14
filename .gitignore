@@ -13,3 +13,6 @@ dashboard/dist/
 node_modules/
 *.sqlite
 *.db
+yolo11n.pt
+yolo11n_*/
+*.tar.gz

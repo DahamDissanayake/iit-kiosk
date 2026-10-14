@@ -5,8 +5,10 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
     "markdown-it-py>=3.0",
+    "ncnn>=1.0.20240410",
     "numpy>=1.26",
     "onnxruntime>=1.18",
+    "openvino>=2024.4",
     "pypdf>=5.0",
     "python-docx>=1.1",
     "pyzmq>=26",
@@ -19,6 +21,9 @@ dev = [
     "pytest>=8",
     "httpx>=0.27",
     "ruff>=0.6",
+]
+export = [
+    "ultralytics>=8.3",
 ]
 
 [tool.uv]
