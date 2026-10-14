@@ -21,6 +21,7 @@ dev = [
     "pytest>=8",
     "httpx>=0.27",
     "ruff>=0.6",
+    "opencv-python-headless>=5.0.0.93",
 ]
 export = [
     "ultralytics>=8.3",
