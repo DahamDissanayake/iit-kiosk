@@ -14,6 +14,7 @@ from core.admin.apply import SettingsApplier
 from core.admin.settings import ZONE_KEYS
 from core.controller.machine import Controller, ControllerConfig
 from core.runtime import Runtime
+from core.sdnotify import notify
 from core.services import Services, build_services
 from core.store.events import SessionRecorder
 
@@ -90,6 +91,7 @@ def create_app(
             if cfg["voice"]["mode"] == "service":
                 voice_link = VoiceLink(runtime, ctx, cfg["bus"]["voice_pub"], core_pub)
                 voice_link.start()
+        notify("READY=1")  # tells systemd (Type=notify) that startup is complete
         yield
         for link in (vision, voice_link):
             if link:

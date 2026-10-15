@@ -31,6 +31,7 @@ from core.controller.types import (
     UiSend,
     VisionRate,
 )
+from core.sdnotify import notify
 from core.speech import SpeechOutput, SpeechQueue
 
 log = logging.getLogger("kiosk.core")
@@ -63,6 +64,7 @@ class Runtime:
         self.record = record or (lambda kind, value: log.info("event %s %s", kind, value))
         self.mic_muted = True
         self.mic_listeners: list[Callable[[bool], None]] = []
+        self.dev_presence_until = 0.0
         self.vision_listeners: list[Callable[[float], None]] = []
         self.vision_fps: float | None = None
         self.voice = SpeechQueue(speech, send, self._speech_failed)
@@ -118,6 +120,9 @@ class Runtime:
 
     async def _dev(self, msg: dict) -> None:
         action = msg.get("action")
+        if action in ("approach", "group", "linger", "walkpast", "leave"):
+            # the soak test drives presence; ignore the real camera for a while
+            self.dev_presence_until = self.clock() + 30.0
         if action == "approach":
             await self.handle(Presence(1, approaching=True))
         elif action == "group":
@@ -207,8 +212,13 @@ class Runtime:
         self._answer_task = None
 
     async def _tick_loop(self) -> None:
+        last_ping = 0.0
         while True:
             await self.handle(Tick())
+            now = time.monotonic()
+            if now - last_ping >= 1.0:
+                notify("WATCHDOG=1")  # systemd restarts us if this loop stops
+                last_ping = now
             await asyncio.sleep(TICK_S)
 
     async def _later(self, delay: float, event: Event) -> None:

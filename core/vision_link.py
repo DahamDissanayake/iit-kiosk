@@ -67,6 +67,8 @@ class VisionLink:
             self.last_seen = self.clock()
             if not self.rt.c.camera_ok:
                 await self.rt.handle(CameraStatus(True))
+            if self.rt.dev and self.rt.clock() < self.rt.dev_presence_until:
+                return  # dev presence (soak test) wins over the real camera
             await self.rt.handle(to_presence(payload))
         elif topic == "camera" and not payload.get("ok"):
             await self.rt.handle(CameraStatus(False))
