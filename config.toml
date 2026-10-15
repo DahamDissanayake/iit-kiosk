@@ -59,6 +59,8 @@ settings_hold_s = 3
 session_idle_s = 300
 pin_max_tries = 5
 lockout_s = 300
+restart_cmd = ["systemctl", "--user", "restart", "kiosk-vision", "kiosk-core"]
+shutdown_cmd = ["sudo", "/usr/sbin/shutdown", "-h", "now"]
 
 [privacy]
 log_unmatched_questions = false
