@@ -43,6 +43,8 @@ def test_probe_state_starts_unknown_then_updates_in_the_background():
     assert before is None and after is True and checked_at is not None
 
 
-def test_restart_count_is_none_when_systemd_is_not_available():
-    # A laptop or CI has no such unit: the page shows "n/a", never an error.
-    assert systemd_restarts("kiosk-core-does-not-exist") is None
+def test_restart_count_is_a_number_or_nothing_and_never_raises():
+    # No systemd (laptop): None. Linux with systemd: systemctl reports 0 even for an unknown unit.
+    # Either way the page shows a count or "n/a", never an error.
+    result = systemd_restarts("kiosk-core-does-not-exist")
+    assert result is None or (isinstance(result, int) and result >= 0)
