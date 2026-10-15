@@ -42,7 +42,7 @@ def create_app(
     cfg: dict,
     dev: bool = False,
     services: Services | None = None,
-    dev_no_voice: bool = False,
+    links: bool = True,
 ) -> FastAPI:
     services = services or build_services(cfg, dev=dev)
     hub = Hub()
@@ -62,30 +62,46 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         runtime.start()
-        voice = services.voice(runtime) if (services.voice and not dev_no_voice) else None
+        voice = services.voice(runtime) if (links and services.voice) else None
         if voice:
             voice.start()
-        link = None
-        if cfg["voice"]["mode"] == "service" and not dev_no_voice:
+        ctx = core_pub = vision = voice_link = None
+        if links:
             import zmq.asyncio
 
-            from core.bus import Publisher
+            from core.bus import Publisher, Subscriber
+            from core.vision_link import VisionLink
             from core.voice_link import VoiceLink
 
-            ctx = zmq.asyncio.Context.instance()
-            link = VoiceLink(
-                runtime, ctx, cfg["bus"]["voice_pub"], Publisher(ctx, cfg["bus"]["core_pub"])
+            ctx = zmq.asyncio.Context()
+            core_pub = Publisher(ctx, cfg["bus"]["core_pub"])
+            vision = VisionLink(
+                runtime,
+                Subscriber(
+                    ctx, [cfg["bus"]["vision_pub"]], ["presence", "camera", "vision.preview"]
+                ),
+                core_pub,
             )
-            link.start()
+            vision.start()
+            app.state.vision_link = vision
+            if cfg["voice"]["mode"] == "service":
+                voice_link = VoiceLink(runtime, ctx, cfg["bus"]["voice_pub"], core_pub)
+                voice_link.start()
         yield
-        if link:
-            await link.stop()
+        for link in (vision, voice_link):
+            if link:
+                await link.stop()
         if voice:
             voice.stop()
         await runtime.stop()
+        if core_pub:
+            core_pub.close()
+        if ctx:
+            ctx.term()
 
     app = FastAPI(lifespan=lifespan)
     app.state.runtime = runtime
+    app.state.vision_link = None  # set while the vision link is running
 
     @app.get("/health")
     async def health() -> dict:

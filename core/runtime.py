@@ -63,6 +63,7 @@ class Runtime:
         self.record = record or (lambda kind, value: log.info("event %s %s", kind, value))
         self.mic_muted = True
         self.mic_listeners: list[Callable[[bool], None]] = []
+        self.vision_listeners: list[Callable[[float], None]] = []
         self.vision_fps: float | None = None
         self.voice = SpeechQueue(speech, send, self._speech_failed)
         self._lock = asyncio.Lock()
@@ -172,6 +173,8 @@ class Runtime:
                         listener(muted)
                 case VisionRate(fps=fps):
                     self.vision_fps = fps
+                    for listener in self.vision_listeners:
+                        listener(fps)
                 case Ask():
                     self._cancel_answer()
                     self._answer_task = self._spawn(self._answer(cmd))
