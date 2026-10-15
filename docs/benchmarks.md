@@ -4,7 +4,8 @@ Measured results and the decisions they drive. Sections:
 
 - [Voice and embeddings on the bench Pi (IIT-24)](#voice-and-embeddings-on-the-bench-pi-iit-24)
 - [Speech to text model (IIT-21)](#speech-to-text-model-iit-21)
-- Detector on the Pi (IIT-33) and the 8-hour soak (IIT-51) are added by those tasks.
+- [Detector and live presence checks on the bench Pi (IIT-33)](#detector-and-live-presence-checks-on-the-bench-pi-iit-33)
+- The 8-hour soak (IIT-51) is added by that task.
 
 ## Voice and embeddings on the bench Pi (IIT-24)
 
@@ -55,6 +56,51 @@ Both default to the safe, already-configured choice until measured:
 
 Record the outcome here as **Decision: ...** with the numbers that justify it, and change
 `config.toml` in the same pull request.
+
+## Detector and live presence checks on the bench Pi (IIT-33)
+
+**Status: the tool is built and verified; the Pi measurements, the live checks and the backend
+decision are still to be done on the bench Pi 5 with the camera.** The laptop line below is a
+real run (AMD Ryzen 7 7435HS, NCNN, blank synthetic frames, 20 s) kept only as a comparison point.
+The OpenVINO export could not be made on that laptop (Windows ran out of paging file loading
+OpenVINO), so OpenVINO has no baseline here and must be exported by the `models` workflow first.
+
+### 1. Detector stability (30 minutes each)
+
+```bash
+export KIOSK_MODELS_DIR=/opt/kiosk/models
+uv run python -m tools.bench_vision --backend ncnn --minutes 30
+uv run python -m tools.bench_vision --backend openvino --minutes 30
+```
+
+One JSON line each: `median_ms`, `p99_ms`, `max_ms`, `max_fps`, `freezes_over_2s`, `max_temp_c`.
+`freezes_over_2s` counts gaps of more than 2 s between frames (the reported NCNN freeze on the
+Pi 5); `max_ms` shows a single long stall that `p99_ms` would hide. `--camera synthetic --seconds N`
+measures the detector without a camera.
+
+| Backend | Median | p99 | Max | Max fps | Freezes over 2 s | Peak temp |
+| --- | --- | --- | --- | --- | --- | --- |
+| Laptop, NCNN, synthetic frames (measured) | 41.9 ms | 57.3 ms | 94.2 ms | 23.8 | 0 | n/a |
+| Pi 5, NCNN | _to measure_ | _to measure_ | _to measure_ | _to measure_ | _to measure_ | _to measure_ |
+| Pi 5, OpenVINO | _to measure_ | _to measure_ | _to measure_ | _to measure_ | _to measure_ | _to measure_ |
+
+**Decision rule:** keep the backend with **zero freezes** and at least **8 fps** at 320 px (that is
+a median of 125 ms or better). If both qualify, keep the faster. Set `[vision] backend` in
+`config.toml` in the same pull request that records the result.
+
+### 2. Live presence checks (start `python -m vision` and `python -m core --dev`)
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| 1 | Walk straight towards the camera from 3 m | Attentive, then a greeting within about 1.5 s; the eyes follow you (flip `[vision] mirror` if they move the wrong way) | _to check_ |
+| 2 | Walk across the frame at 2 m without stopping | No greeting | _to check_ |
+| 3 | Stand still about 1 m away for 2 s | A greeting (dwell) | _to check_ |
+| 4 | Walk away during the conversation | A silent wave about 3 s after you leave the zone, then Idle | _to check_ |
+| 5 | Power off, unplug the camera ribbon, boot | "Tap to talk" within 5 s; touch still works | _to check_ |
+| 6 | After the run: `find / -xdev \( -name "*.jpg" -o -name "*.png" -o -name "*.mp4" -o -name "*.h264" \) -newer /tmp/start 2>/dev/null` (run `touch /tmp/start` first) | No output: no image or video files exist | _to check_ |
+
+Then tune `min_box_height_frac`, `approach_growth` and `centre_band` for the bench room (dashboard
+Settings shows the live boxes) and record the values here.
 
 ## Speech to text model (IIT-21)
 
