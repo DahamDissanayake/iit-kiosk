@@ -28,7 +28,9 @@ class VisionLink:
         core_pub,
         heartbeat_s: float = 5.0,
         clock: Callable[[], float] = time.monotonic,
+        zone_source: Callable[[], dict] | None = None,
     ) -> None:
+        self.zone_source = zone_source
         self.rt = runtime
         self.sub = sub
         self.core_pub = core_pub
@@ -90,3 +92,5 @@ class VisionLink:
             await self.check_heartbeat()
             # repeat the rate so a restarted kiosk-vision picks it up
             await self.core_pub.publish("vision.rate", {"fps": self.fps})
+            if self.zone_source:
+                await self.core_pub.publish("vision.config", self.zone_source())

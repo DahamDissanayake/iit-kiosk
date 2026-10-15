@@ -69,3 +69,17 @@ def test_malformed_message_is_ignored():
         ws.send_json(["not", "an", "object"])
         ws.send_json({"type": "dev", "action": "linger"})
         read_until(ws, lambda m: m == {"type": "state", "state": "attentive"})
+
+
+def test_stored_settings_apply_at_startup():
+    cfg = load_config(ROOT / "config.toml")
+    services = build_services(cfg, dev=True, embedder=HashEmbedder(), env={}, with_voice=False)
+    services.settings.update({"greet_cooldown_s": 45, "min_score": 0.6, "quiet_mode": True})
+    application = create_app(cfg, dev=True, services=services, links=False)
+    with TestClient(application) as client, client.websocket_connect("/ws") as ws:
+        snapshot = read_until(ws, lambda m: m["type"] == "state")
+        runtime = application.state.runtime
+        assert runtime.c.cfg.greet_cooldown_s == 45
+        assert runtime.music == {"url": "", "volume": cfg["audio"]["music_volume"]}
+        assert {"type": "music", "url": "", "volume": cfg["audio"]["music_volume"]} in snapshot
+        assert client.get("/health").json() == {"ok": True}
