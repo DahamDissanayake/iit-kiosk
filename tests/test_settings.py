@@ -91,3 +91,17 @@ def test_applier_updates_controller_answers_privacy_music_and_volume():
     assert services.unmatched.enabled is True
     assert {"type": "music", "url": "", "volume": values["music_volume"]} in sent
     assert volumes == [0.4]
+
+
+def test_applier_announces_privacy_notice():
+    sent = []
+
+    async def send(msg):
+        sent.append(msg)
+
+    rt = Runtime(Controller(ControllerConfig()), FakeSpeech(), CannedAnswerer(), send)
+    applier = SettingsApplier(rt, FakeServices(), "", set_volume=lambda v: None)
+    values = {**Settings(Database(":memory:"), CFG).all(), "log_unmatched_questions": True}
+    asyncio.run(applier.apply(values))
+    assert {"type": "privacy", "logQuestions": True} in sent
+    assert {"type": "privacy", "logQuestions": True} in rt.snapshot()

@@ -52,3 +52,5 @@ class SettingsApplier:
         self.runtime.music = {"url": url, "volume": s["music_volume"]}
         await self.runtime.send({"type": "music", **self.runtime.music})
         self.set_volume(s["volume"] * (0.5 if quiet else 1.0))
+        self.runtime.privacy = {"type": "privacy", "logQuestions": s["log_unmatched_questions"]}
+        await self.runtime.send(self.runtime.privacy)
