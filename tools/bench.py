@@ -8,7 +8,6 @@ uv run python -m tools.bench system --seconds 600 --every 5 > system.jsonl
 
 import argparse
 import json
-import os
 import statistics
 import time
 from pathlib import Path
@@ -17,6 +16,7 @@ import numpy as np
 
 from core.config import load_config
 from core.paths import models_dir
+from core.sysinfo import load1, read_mem_mb, read_temp
 
 
 def emit(**values) -> None:
@@ -76,21 +76,6 @@ def bench_vad(cfg: dict) -> None:
     emit(test="vad", ms_per_frame=round(per * 1000, 3), realtime_factor=round(0.032 / per, 1))
 
 
-def read_temp() -> float | None:
-    path = Path("/sys/class/thermal/thermal_zone0/temp")
-    return int(path.read_text()) / 1000 if path.exists() else None
-
-
-def read_mem_mb() -> tuple[int, int] | None:
-    path = Path("/proc/meminfo")
-    if not path.exists():
-        return None
-    info = dict(line.split(":", 1) for line in path.read_text().splitlines())
-    total = int(info["MemTotal"].split()[0]) // 1024
-    avail = int(info["MemAvailable"].split()[0]) // 1024
-    return total, avail
-
-
 def bench_system(seconds: int, every: int) -> None:
     end = time.time() + seconds
     while time.time() < end:
@@ -99,7 +84,7 @@ def bench_system(seconds: int, every: int) -> None:
             test="system",
             ts=round(time.time()),
             temp_c=read_temp(),
-            load1=os.getloadavg()[0] if hasattr(os, "getloadavg") else None,
+            load1=load1(),
             mem_used_mb=(mem[0] - mem[1]) if mem else None,
         )
         time.sleep(every)
