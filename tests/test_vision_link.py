@@ -125,3 +125,17 @@ def test_stop_closes_the_subscriber_so_zeromq_can_shut_down():
         return sub.closed
 
     assert asyncio.run(go()) is True
+
+
+def test_zone_settings_are_republished_to_vision_every_second():
+    async def go():
+        rt = Runtime(Controller(ControllerConfig()), FakeSpeech(), CannedAnswerer(delay_s=0), noop)
+        pub = FakePub()
+        link = VisionLink(rt, sub=None, core_pub=pub, zone_source=lambda: {"centre_band": 0.7})
+        task = asyncio.create_task(link._watch_loop())
+        await asyncio.sleep(1.3)
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        return pub.msgs
+
+    assert ("vision.config", {"centre_band": 0.7}) in asyncio.run(go())

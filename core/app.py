@@ -10,6 +10,8 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
+from core.admin.apply import SettingsApplier
+from core.admin.settings import ZONE_KEYS
 from core.controller.machine import Controller, ControllerConfig
 from core.runtime import Runtime
 from core.services import Services, build_services
@@ -46,22 +48,22 @@ def create_app(
 ) -> FastAPI:
     services = services or build_services(cfg, dev=dev)
     hub = Hub()
-    music_url = cfg["ui"].get("music_url")
-    music = {"url": music_url, "volume": cfg["audio"]["music_volume"]} if music_url else None
     runtime = Runtime(
         Controller(ControllerConfig.from_config(cfg)),
         services.speech,
         services.answerer,
         hub.broadcast,
         dev=dev,
-        music=music,
         record=SessionRecorder(services.events),
         menu_source=services.kb.menu_items,
     )
 
+    applier = SettingsApplier(runtime, services, cfg["ui"].get("music_url", ""))
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         runtime.start()
+        await applier.apply(services.settings.all())
         voice = services.voice(runtime) if (links and services.voice) else None
         if voice:
             voice.start()
@@ -81,6 +83,7 @@ def create_app(
                     ctx, [cfg["bus"]["vision_pub"]], ["presence", "camera", "vision.preview"]
                 ),
                 core_pub,
+                zone_source=lambda: {k: services.settings.all()[k] for k in ZONE_KEYS},
             )
             vision.start()
             app.state.vision_link = vision
@@ -101,6 +104,7 @@ def create_app(
 
     app = FastAPI(lifespan=lifespan)
     app.state.runtime = runtime
+    app.state.applier = applier
     app.state.vision_link = None  # set while the vision link is running
 
     @app.get("/health")

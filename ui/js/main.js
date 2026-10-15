@@ -63,7 +63,7 @@ function handle(m) {
     case 'audio': audio.playPCM16(m.data, m.sampleRate || 22050, m.id); break;
     case 'stopAudio': audio.stop(); break;
     case 'camera': root.dataset.camera = m.ok ? 'on' : 'off'; updatePrivacy(); break;
-    case 'music': audio.setMusic(m.url, m.volume); break;
+    case 'music': audio.setMusic(m.url, m.volume); audio.duckFor(root.dataset.state); break;
     case 'menu': if (m.show) sheet.show(m.items || []); else sheet.hide(); break;
     case 'kids': kids.set(m.value); break;
     case 'dev': dev.show(m.enabled); break;

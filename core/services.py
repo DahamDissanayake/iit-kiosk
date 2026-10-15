@@ -7,6 +7,7 @@ from typing import Protocol
 
 import httpx
 
+from core.admin.settings import Settings
 from core.answer import Answerer, CannedAnswerer, RagAnswerer
 from core.controller.phrases import PHRASES
 from core.llm.providers import make_provider
@@ -36,6 +37,7 @@ class Services:
     unmatched: UnmatchedLog
     speech: SpeechOutput
     answerer: Answerer
+    settings: Settings
     voice: Callable[[Runtime], VoiceHandle] | None = None
 
 
@@ -53,6 +55,7 @@ def build_services(
     rag, llm_cfg, privacy = cfg["rag"], cfg["llm"], cfg["privacy"]
 
     db = Database(data / "kiosk.db")
+    settings = Settings(db, cfg)
     events = EventLog(db)
     unmatched = UnmatchedLog(
         db, privacy["log_unmatched_questions"], privacy["unmatched_retention_days"]
@@ -106,4 +109,4 @@ def build_services(
             runtime.mic_listeners.append(pipeline.set_muted)
             return pipeline
 
-    return Services(db, kb, events, unmatched, speech, answerer, voice)
+    return Services(db, kb, events, unmatched, speech, answerer, settings, voice)

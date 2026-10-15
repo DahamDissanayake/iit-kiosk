@@ -78,6 +78,7 @@ export class AudioEngine {
   setMusic(url, volume = this.musicBase) {
     const ctx = this.ensure();
     this.musicBase = volume;
+    if (this.musicEl && url && this.musicEl.dataset.url === url) return; // volume change only
     if (this.musicEl) this.musicEl.pause();
     this.musicEl = null;
     if (!url) return;
@@ -86,6 +87,7 @@ export class AudioEngine {
       this.musicGain.connect(ctx.destination);
     }
     this.musicEl = new Audio(url);
+    this.musicEl.dataset.url = url;
     this.musicEl.loop = true;
     ctx.createMediaElementSource(this.musicEl).connect(this.musicGain);
     this.musicGain.gain.value = this.musicBase;
