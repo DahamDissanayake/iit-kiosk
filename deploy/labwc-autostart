@@ -1,0 +1,1 @@
+/opt/kiosk/current/deploy/kiosk-ui.sh >/tmp/kiosk-ui.log 2>&1 &

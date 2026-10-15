@@ -1,0 +1,20 @@
+[Unit]
+Description=IIT kiosk vision: camera presence (no images stored)
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+WorkingDirectory=/opt/kiosk/current
+Environment=KIOSK_MODELS_DIR=/opt/kiosk/models
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kiosk/current/.venv/bin/python -m vision
+Restart=always
+RestartSec=2
+TimeoutStartSec=60
+WatchdogSec=15
+CPUAffinity=2 3
+Nice=5
+
+[Install]
+WantedBy=default.target

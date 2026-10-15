@@ -1,0 +1,22 @@
+[Unit]
+Description=IIT kiosk core: controller, answers, speech, dashboard
+After=pipewire.service wireplumber.service
+Wants=pipewire.service wireplumber.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+WorkingDirectory=/opt/kiosk/current
+Environment=KIOSK_DATA_DIR=/var/lib/kiosk
+Environment=KIOSK_MODELS_DIR=/opt/kiosk/models
+Environment=HF_HOME=/opt/kiosk/models/hf
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kiosk/current/.venv/bin/python -m core
+Restart=always
+RestartSec=2
+TimeoutStartSec=180
+WatchdogSec=30
+
+[Install]
+WantedBy=default.target
