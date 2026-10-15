@@ -153,3 +153,17 @@ def test_runtime_forwards_mute_and_voice_events():
         await rt.stop()
 
     asyncio.run(go())
+
+
+def test_tick_loop_pings_the_watchdog(monkeypatch):
+    pings = []
+    monkeypatch.setattr("core.runtime.notify", pings.append)
+
+    async def go():
+        rt, _ = make()
+        rt.start()
+        await asyncio.sleep(1.2)
+        await rt.stop()
+
+    asyncio.run(go())
+    assert "WATCHDOG=1" in pings

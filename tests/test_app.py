@@ -1,3 +1,6 @@
+import socket
+import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -83,3 +86,31 @@ def test_stored_settings_apply_at_startup():
         assert runtime.music == {"url": "", "volume": cfg["audio"]["music_volume"]}
         assert {"type": "music", "url": "", "volume": cfg["audio"]["music_volume"]} in snapshot
         assert client.get("/health").json() == {"ok": True}
+
+
+def test_startup_signals_ready_to_systemd_after_the_runtime_is_up(monkeypatch):
+    sent = []
+    monkeypatch.setattr("core.app.notify", sent.append)
+    with TestClient(app()):
+        assert sent == ["READY=1"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unix datagram sockets")
+def test_ready_and_watchdog_reach_a_real_notify_socket(tmp_path, monkeypatch):
+    """What a Type=notify unit receives: READY=1 exactly once and WATCHDOG=1 pings."""
+    sock_path = str(tmp_path / "notify.sock")
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    server.bind(sock_path)
+    server.settimeout(0.2)
+    monkeypatch.setenv("NOTIFY_SOCKET", sock_path)
+    received = []
+    with TestClient(app()):
+        deadline = time.time() + 3
+        while time.time() < deadline and not ("READY=1" in received and "WATCHDOG=1" in received):
+            try:
+                received.append(server.recv(100).decode())
+            except TimeoutError:
+                pass
+    server.close()
+    assert received.count("READY=1") == 1  # a WATCHDOG ping may arrive first; systemd allows it
+    assert "WATCHDOG=1" in received
