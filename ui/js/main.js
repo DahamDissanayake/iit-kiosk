@@ -12,6 +12,7 @@ const GEAR_HOLD_S = 3;
 const root = document.getElementById('root');
 const bubble = document.getElementById('bubble');
 const privacy = document.getElementById('privacyText');
+let logQuestions = false;
 
 const audio = new AudioEngine();
 const bot = startBot(root, audio);
@@ -51,7 +52,8 @@ function setState(state, text) {
 }
 
 function updatePrivacy() {
-  privacy.textContent = root.dataset.camera === 'off' ? t('privacyOff') : t('privacy');
+  if (root.dataset.camera === 'off') privacy.textContent = t('privacyOff');
+  else privacy.textContent = logQuestions ? t('privacyLogging') : t('privacy');
 }
 
 function handle(m) {
@@ -62,6 +64,7 @@ function handle(m) {
     case 'lookAt': bot.lookAt(m.x, m.y); break;
     case 'audio': audio.playPCM16(m.data, m.sampleRate || 22050, m.id); break;
     case 'stopAudio': audio.stop(); break;
+    case 'privacy': logQuestions = Boolean(m.logQuestions); updatePrivacy(); break;
     case 'camera': root.dataset.camera = m.ok ? 'on' : 'off'; updatePrivacy(); break;
     case 'music': audio.setMusic(m.url, m.volume); audio.duckFor(root.dataset.state); break;
     case 'menu': if (m.show) sheet.show(m.items || []); else sheet.hide(); break;

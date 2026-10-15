@@ -99,6 +99,8 @@ class Runtime:
         ]
         if self.music:
             msgs.append({"type": "music", **self.music})
+        if getattr(self, "privacy", None):
+            msgs.append(self.privacy)
         msgs.append({"type": "state", "state": self.c.state})
         return msgs
 

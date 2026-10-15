@@ -4,6 +4,7 @@ export const STRINGS = {
   en: {
     listening: "I'm listening…",
     privacy: 'Camera checks presence only. No photos or video are saved.',
+    privacyLogging: 'Camera checks presence only. Questions the assistant cannot answer are kept for 30 days to improve it.',
     privacyOff: 'Camera unavailable. Tap to talk to start.',
     talk: 'Tap to talk',
     stop: 'Stop',
