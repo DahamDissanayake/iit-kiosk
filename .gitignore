@@ -17,3 +17,5 @@ yolo11n.pt
 yolo11n_*/
 *.tar.gz
 .data/
+dashboard/node_modules/
+dashboard/dist/
