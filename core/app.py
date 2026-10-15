@@ -38,7 +38,12 @@ class Hub:
                 self._clients.discard(ws)
 
 
-def create_app(cfg: dict, dev: bool = False, services: Services | None = None) -> FastAPI:
+def create_app(
+    cfg: dict,
+    dev: bool = False,
+    services: Services | None = None,
+    dev_no_voice: bool = False,
+) -> FastAPI:
     services = services or build_services(cfg, dev=dev)
     hub = Hub()
     music_url = cfg["ui"].get("music_url")
@@ -57,7 +62,26 @@ def create_app(cfg: dict, dev: bool = False, services: Services | None = None) -
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         runtime.start()
+        voice = services.voice(runtime) if (services.voice and not dev_no_voice) else None
+        if voice:
+            voice.start()
+        link = None
+        if cfg["voice"]["mode"] == "service" and not dev_no_voice:
+            import zmq.asyncio
+
+            from core.bus import Publisher
+            from core.voice_link import VoiceLink
+
+            ctx = zmq.asyncio.Context.instance()
+            link = VoiceLink(
+                runtime, ctx, cfg["bus"]["voice_pub"], Publisher(ctx, cfg["bus"]["core_pub"])
+            )
+            link.start()
         yield
+        if link:
+            await link.stop()
+        if voice:
+            voice.stop()
         await runtime.stop()
 
     app = FastAPI(lifespan=lifespan)
