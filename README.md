@@ -30,3 +30,7 @@ Without a key or voice, `--dev` falls back to canned answers and placeholder aud
 uv run pytest
 uv run ruff check .
 ```
+
+## Kiosk operations
+
+Setup, deploy, rollback, spare SD card, venue checklist: `docs/runbook.md`.
