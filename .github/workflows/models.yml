@@ -1,0 +1,26 @@
+name: models
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag for the model files
+        default: models-v1
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen --group export
+      - run: uv run --group export python -m tools.export_yolo
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ inputs.tag }}" models/yolo11n-export.tar.gz \
+            --title "Model files (${{ inputs.tag }})" \
+            --notes "YOLO11n exported at 320 px: NCNN and OpenVINO INT8. Not a kiosk release."
