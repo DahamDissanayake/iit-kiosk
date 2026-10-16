@@ -1,8 +1,12 @@
 """Camera sources. Frames are returned in memory and never saved."""
 
+import logging
+from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
+
+log = logging.getLogger(__name__)
 
 
 class Camera(Protocol):
@@ -54,3 +58,16 @@ class WebcamCamera:
 
     def close(self) -> None:
         self.cap.release()
+
+
+def with_fallback(primary: Callable[[], Camera], fallback: Callable[[], Camera]):
+    """Open the primary camera; if it is unavailable use the fallback (dev only)."""
+
+    def open_camera() -> Camera:
+        try:
+            return primary()
+        except Exception as e:
+            log.info("primary camera unavailable (%s); trying the webcam", e)
+            return fallback()
+
+    return open_camera

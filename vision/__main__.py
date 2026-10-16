@@ -1,4 +1,4 @@
-"""kiosk-vision: `uv run python -m vision` (Pi camera) or `--webcam 0` (laptop)."""
+"""kiosk-vision: `python -m vision` (Pi camera), `--webcam 0` (laptop) or `--dev` (either)."""
 
 import argparse
 import asyncio
@@ -16,9 +16,13 @@ from vision.service import VisionService
 from vision.track import IouTracker
 
 
-async def serve(cfg: dict, webcam: int | None) -> None:
+async def serve(cfg: dict, webcam: int | None, dev: bool = False) -> None:
     v = cfg["vision"]
-    if webcam is None:
+    if webcam is None and dev:
+        from vision.camera import PiCamera, WebcamCamera, with_fallback
+
+        factory = with_fallback(PiCamera, WebcamCamera)
+    elif webcam is None:
         from vision.camera import PiCamera as factory
     else:
         from vision.camera import WebcamCamera
@@ -45,10 +49,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m vision")
     parser.add_argument("--config", default="config.toml")
     parser.add_argument("--webcam", type=int, default=None)
+    parser.add_argument(
+        "--dev", action="store_true", help="use the webcam if the Pi camera is missing"
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     use_selector_loop_on_windows()
-    asyncio.run(serve(load_config(args.config), args.webcam))
+    asyncio.run(serve(load_config(args.config), args.webcam, args.dev))
 
 
 if __name__ == "__main__":
