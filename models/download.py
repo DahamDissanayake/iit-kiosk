@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import os
 import sys
+import tarfile
 from pathlib import Path
 
 import httpx
@@ -17,6 +18,13 @@ FILES = {
     "silero_vad.onnx": "https://github.com/snakers4/silero-vad/raw/v5.1.2/src/silero_vad/data/silero_vad.onnx",
     "piper/en_US-lessac-medium.onnx": f"{PIPER}/en_US-lessac-medium.onnx",
     "piper/en_US-lessac-medium.onnx.json": f"{PIPER}/en_US-lessac-medium.onnx.json",
+}
+ARCHIVES = {
+    "yolo11n-export.tar.gz": (
+        "https://github.com/DahamDissanayake/iit-kiosk/releases/download/models-v1/"
+        "yolo11n-export.tar.gz",
+        "yolo",
+    ),
 }
 CHECKSUMS = Path(__file__).with_name("checksums.sha256")
 
@@ -63,6 +71,20 @@ def main(argv: list[str] | None = None) -> int:
         recorded.append(f"{digest}  {name}")
         if not args.record and expected.get(name) != digest:
             bad.append(name)
+
+    for name, (url, folder) in ARCHIVES.items():
+        path = dest / name
+        if not path.exists():
+            print(f"downloading {name}")
+            download(url, path)
+        digest = sha256(path)
+        recorded.append(f"{digest}  {name}")
+        if not args.record and expected.get(name) != digest:
+            bad.append(name)
+            continue
+        if not (dest / folder).exists():
+            with tarfile.open(path) as tar:
+                tar.extractall(dest, filter="data")
 
     if args.record:
         CHECKSUMS.write_text("\n".join(recorded) + "\n")
