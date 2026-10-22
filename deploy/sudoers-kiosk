@@ -1,0 +1,2 @@
+# Lets the dashboard's "Shut down" button power off the Pi cleanly.
+kiosk ALL=(root) NOPASSWD: /usr/sbin/shutdown -h now

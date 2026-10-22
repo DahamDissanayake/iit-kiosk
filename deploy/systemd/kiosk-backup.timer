@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the kiosk backup every night
+
+[Timer]
+OnCalendar=*-*-* 02:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

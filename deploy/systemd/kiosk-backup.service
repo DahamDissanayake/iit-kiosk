@@ -1,0 +1,7 @@
+[Unit]
+Description=IIT kiosk nightly database backup
+
+[Service]
+Type=oneshot
+Environment=KIOSK_DATA_DIR=/var/lib/kiosk
+ExecStart=/opt/kiosk/current/deploy/backup.sh
